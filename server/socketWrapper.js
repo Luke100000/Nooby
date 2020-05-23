@@ -1,87 +1,157 @@
-//TCP
-serverTCP = require('net').createServer();
-//UPD
-serverUDP = require('dgram').createSocket('udp4');
-//WEB	-> we must use a good 3rd party lib! (this one has 200 000weekly downloads -> should be good..)
-const http = require('http');
-const WebSocketServer = require('websocket').server;
-const serverHTTP = http.createServer();
-serverWEB = new WebSocketServer({
-    httpServer: serverHTTP
-});
-
-////////////		LOAD
-//TCP
-serverTCP.on('connection', function (socket) {
-	socket.setNoDelay(true)
-	socket.setKeepAlive(true, 300 * 1000)
-	socket.isConnected = true
-	socket.connectionId = socket.remoteAddress + '-' + socket.remotePort // unique, used to trim out from sockets hashmap when closing socket
-	var arr = new Uint8Array(cfg.buffer_size)
-	socket.buffer = Buffer.from(arr.buffer, "binary")
-	socket.buffer.len = 0 // due to Buffer's nature we have to keep track of buffer contents ourself
-
-	_log('[TCP] New client: ' + socket.remoteAddress + ':' + socket.remotePort + ' at ' + (new Date().toISOString()))
-
-	socket.on('data', function (dataRaw) { // dataRaw is an instance of Buffer as well
-		main.socketData(socket, dataRaw)
-	}) //end of socket.on 'data'
-
-	socket.on('error', function () { return destroySocketTCP(socket) })
-	socket.on('close', function () { return destroySocketTCP(socket) })
-}) //end of serverTCP.on 'connection'
-serverTCP.on('listening', function (){console.log('[TCP] Nooby running on ' + serverTCP.address().address + ':' + serverTCP.address().port)})
-serverTCP.listen(param.portTCP, '::')
-
-//UDP
-//udp has no client management. everyone can send and receive everytime
-serverUDP.on('connection', function(socket){
-	socket.setRecvBufferSize(cfg.buffer_size)
-	socket.setSendBufferSize(cfg.buffer_size)
+class Msg {
+	/*
+		Header:	(4 Byte)
+			1 Byte type		-> 0 "normal on everyone in channel"  ->1:  json     ->2: checkAlive
+			3 Byte length (either JSON if present or DATA, use JSON entry instead)
+	*/
 	
-	//_log('New client: ' + socket.remoteAddress + ':' + socket.remotePort + ' at ' + (new Date().toISOString()))
-	serverUDP.on('message',function(dataRaw, info){
+	constructor() {
+		this.data = false
+		this.json = {}
+	}
+}
+
+class Wrapper {
+	constructor(cfg, callbacks) {
+		this.clients = []
+		this.lastID = 0
+		this.cfg = {}
 		
-	})
+		this.cfg = cfg
+		this.callbacks = callbacks
+		
+		new (require("./sockets/tcp.js"))(this, cfg.portTCP)      //include tcp socket
+		new (require("./sockets/udp.js"))(this, cfg.portUDP)      //include udp socket
+		new (require("./sockets/web.js"))(this, cfg.portWEB)      //include web socket
+	}
 	
-}) //end of serverUDP.on 'connection'
-serverUDP.on('listening', function(){console.log('[UDP] Nooby running on ' + serverUDP.address().address + ':' + serverUDP.address().port)})
-serverUDP.bind(param.portUDP)
+	//generate unique ids
+	getID = function() {
+		this.lastID++;
+		return this.lastID;
+	}
 
-//WEB
-serverWEB.on('request', function(request) {
-    const connection = request.accept(null, request.origin);
-    connection.on('message', function(message) {
-      console.log('Received Message:', message.utf8Data);
-      connection.sendUTF('Hi this is WebSocket server!');
-    });
-    connection.on('close', function(reasonCode, description) {
-        console.log('Client has disconnected.');
-    });
-});
-serverHTTP.on('listening', function(){console.log('[WEB] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)})
-serverHTTP.listen(param.portWEB);
+	newClient = function(client) {
+		client.buffer = Buffer.allocUnsafe(cfg.bufferSize);
+		client.bytesReceived = 0
 
-//vars
-clientsTCP = {}
-clientsUDP = {}
-clientsWEB = {}
+		this.clients.push(client)
+		this.callbacks.newClient(client)
+	}
 
-var checkOnline = function(){		//can be called interval to check if a user is online like every 10seconds (if server got a message in the last 10 seconds, no message is been send)
+	checkAlive = function(client) {
+		var MSGSendAlive = ""			//TODO
+		sendClient(client, MSGSendAlive)
+	}
 	
+	receive = function(client, data) {
+		client.lastMsg = new Date();
+
+		//append data
+		client.bytesReceived += data.copy(client.buffer, client.bytesReceived)
+
+		//either wait until packet is there, or start processing new data
+		while (true) {
+			if (client.receiving) {
+				if (client.receiving.json && client.receiving.json.l) {	//got json, look if everything got send
+					if (client.bytesReceived >= client.receiving.json.l) {	//check if second block is fully received
+						client.receiving.data = client.buffer.slice(0, client.receiving.json.l).toString()
+						client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
+
+						//pass to nooby
+						this.callbacks.receive(client, client.receiving)
+						client.receiving = false
+					} else {
+						break
+					}
+				} else if (client.bytesReceived >= client.receiving.length) {	//check if first block is fully received
+					let json = client.buffer.slice(0, client.receiving.length)
+					try {
+						client.receiving.json = JSON.parse(json.toString());
+					} catch(err) {
+						destroySocket(client, "JSON_malformed")
+						_log("[JSON] error:",json)
+					}
+					//no data block, return message
+					if (!client.receiving.json.l) {
+						client.receiving.length_data = 0
+						this.callbacks.receive(client, client.receiving)
+						client.receiving = false
+					} else {
+						client.receiving.length_data = client.receiving.json.l
+					}
+
+					//slice
+					client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
+				} else {
+					break
+				}
+			} else {
+				//wait for first 4 bytes
+				if (client.bytesReceived >= 4) {
+					let type = client.buffer.readUInt8(0)
+					let length = client.buffer.readUInt8(1) * 256 * 256 + client.buffer.readUInt8(2) * 256 + client.buffer.readUInt8(3)
+
+					//cut away type and length
+					client.bytesReceived = client.buffer.copy(client.buffer, 0, 4, client.bytesReceived)
+					
+					//start new message
+					client.receiving = new Msg()
+					client.receiving.type = type
+					client.receiving.length = length
+				} else {
+					break
+				}
+			}
+		}
+	}
+
+	shutdown = function(){
+		this.clients.forEach(client => this.send(client, {"info":"Nooby shutdown"}, ""));
+	}
+
+	destroySocket = function(client, info) {
+		let i = this.clients.indexOf(client)
+		if (i = null) {
+			this.clients.splice(i)
+			callbacks.destroySocket(client, info)
+		}
+	}
+
+	msgToPacket = function(msg) {
+		let type = 0
+		let data = ""
+
+		let data_json = JSON.stringify(msg.json);
+
+		let l = data_json.length
+		data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
+
+		data += data_json
+
+		data += msg.data
+
+		return data
+	}
+	
+	send = function(client, json, data) {
+		let msg = new Msg()
+		msg.json = json
+		msg.data = data
+		client.send(client, this.msgToPacket(msg))
+	}
 }
 
-//Functions
-var autoSend = function(socket){
-	
-}
+setInterval(function(){
+	var now = new Date();
+	for (client in this.clients) {
+		if (client.lastMsg - now > 10*1000){
+			checkAlive(client)
+		}
+	}
+}, 10*1000)
 
-var autoReceive = function(socket){
-	
-}
-
-//Export
 module.exports = {
-	autoSend,
-	autoReceive,
+	Wrapper,
+	Msg
 }

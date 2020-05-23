@@ -6,7 +6,7 @@
  *  | |\  | |__| | |__| | |_) | | |   
  *  |_| \_|\____/ \____/|____/  |_|   
 
- * Opensource multiplayer and network messaging for CoronaSDK, Moai, Gideros & LÖVE
+ * Opensource multiplayer and network messaging for Lua
  *
  * @usage
  * $ node nooby.js
@@ -15,73 +15,64 @@
  * Luke100000
  * Thecoolpeople
  *
- * @license WTFPL
+ * @license MIT
  *
- 
 **/
 
 //definitions
-mainPath = "/src/";
-param = {
-	MSG_START: 	"_MSG_START_",
-	MSG_END: 	"_MSG_END_",
-	JSON: 		"_JSON_",
-	portTCP:	25000,
-	portUDP:	25001,
-	portWEB:	25002,
-}
-var cfg = {
+mainPath = "./server/";//"/src/";
+
+cfg = {
 	buffer_size: 1024 * 32, // buffer allocated per each socket client
 	verbose: true, 			// set to true to capture lots of debug info
 	verbose_adv: false,
+
+	portTCP:	25000,
+	portUDP:	25001,
+	portWEB:	25002,
+	bufferSize: 1024 * 64,
 }
 
+var callbacks = {
+	receive: function(client, msg) {
+		_log(msg)
+		socketWrapper.send(client, {lol:"hallo"}, "bimbo")
+	},
 
-stats =  require("./stats.js");  stats.load();
-main = require("./noobyMain.js")
+	newClient: function(client) {
+		
+	},
 
-socketWrapper = require('./socketWrapper.js')
-sockets = { } 			// this is where we store all current client socket connections
-channelSettings = { } 	//this is where we store specific channel settings
+	destroySocket: function(client, info) {
+		
+	},
+}
 
-var _log = function () {
+//logger
+_log = function () {
 	if (cfg.verbose) console.log.apply(console, arguments)
 }
 
-// black magic
-/*process.on('uncaughtException', function (err) {
-	_log('Exception: ' + err) // TODO: think we should terminate it on such exception
-})*/
 
+stats =  require("./stats.js");
+stats.load();
+
+let Wrapper = require('./socketWrapper.js').Wrapper
+socketWrapper = new Wrapper(cfg, callbacks)
+
+//channels and specific channel settings
+channel = {}
+
+
+
+//Shutdown Events with automatical save
 process.on('exit', function () {
 	console.log('[exit] routine start');
 	stats.save();
-	//shutdown sockets   eventually sends messages to connected clients
-	
+	socketWrapper.shutdown();		//shutdown sockets
 	console.log('[exit] routine end');
 });
-process.on('SIGINT', function() { process.exit();});		//go to process.on("exit")
-process.on('SIGTERM', function() { process.exit();});		//go to process.on("exit")
 
-
-/////////////////////////////////////////////////////////////////////////
-//				TEST ENVIRONMENT
-
-console.log("TEST ENVIRONMENT");
-var str = '_MSG_START_{"c":"msg", "length":10}_JSON_nachricht1_MSG_END__MSG_START_{"c":"msg", "length":10}_JSON_nachricht2_MSG_END_'
-while(true) {	// this is for a case when several messages arrived in buffer
-	if ((start = str.indexOf(param.MSG_START)) !== -1 && (end = str.indexOf(param.MSG_END)) !== -1) {
-		//extract message and json
-		var v = main.extract(str, start, end)
-		str = v[0]; var json = v[1]; var msg = v[2];
-		//console.log(v)
-		//socket.buffer.len = socket.buffer.write(str, 0, 'binary')		//renew str in socket	(??why??)
-		
-		//run command
-		main.auto[json.c](null, json, msg);
-	}
-	else{
-		//no fully msg in in the buffer, break the while
-		break;
-	}
-}
+//process.on('uncaughtException', function() { process.exit();});  //go to process.on("exit")
+process.on('SIGINT', function() { process.exit();});             //go to process.on("exit")
+process.on('SIGTERM', function() { process.exit();});            //go to process.on("exit")
