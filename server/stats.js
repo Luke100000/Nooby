@@ -1,3 +1,10 @@
+var json;
+const fs = require('fs');
+
+if (!fs.existsSync(mainPath+"stats/")){
+    fs.mkdirSync(mainPath+"stats/");
+}
+
 function path(){
 	var date = new Date();
 	var path = mainPath+"stats/";
@@ -5,8 +12,6 @@ function path(){
 	path = path + ".json";
 	return path;
 }
-var json;
-const fs = require('fs');
 
 function startNew(){
 	json = JSON.parse('{"msgOut":0, "msgIn":0, "dataOut":0, "dataIn":0, "channels":0, "users":0}');
