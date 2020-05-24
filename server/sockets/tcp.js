@@ -16,7 +16,6 @@ class SocketTCP {
             // dataRaw is an instance of Buffer as well
             socket.on('data', function (dataRaw) {
                 wrapper.receive(socket, dataRaw)
-                
             })
 
             socket.on('error', function () { wrapper.destroySocket(socket, "error") })

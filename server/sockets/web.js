@@ -8,24 +8,31 @@ class SocketWEB {
         });
 
         serverWEB.on('request', function(request) {
-            const connection = request.accept(null, request.origin);
-            connection.on('message', function(message) {
-              console.log('Received Message:', message.utf8Data);
-              connection.sendUTF('Hi this is WebSocket server!');
+            var socket = request.accept(null, request.origin);
+            socket.isConnected = true
+            socket.connectionId = wrapper.getID()
+            _log('[WEB] New client: ' + socket.connectionId + ' at ' + (new Date().toISOString()))
+
+            //register client
+            wrapper.newClient(socket)
+
+            socket.on('message', function(message) {
+              //console.log('Received Message:', message.binaryData);
+              wrapper.receive(socket, dataRaw)
             });
-            connection.on('close', function(reasonCode, description) {
+            socket.on('close', function(reasonCode, description) {
                 console.log('Client has disconnected.');
             });
-        });
+
+            socket.type = "WEB"
+
+            socket.send = function(client, data) {      //data must be a buffer!
+                client.sendBytes(data)
+            }
+        }); //end of serverTCP.on 'request'
         serverHTTP.on('listening', function(){console.log('[WEB] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)})
         serverHTTP.listen(port);
     }
-
-    send = function(client, data){
-        
-    }
-
-    
 }
 
 module.exports = SocketWEB
