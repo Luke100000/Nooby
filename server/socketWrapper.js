@@ -2,7 +2,7 @@ class Msg {
 	/*
 		Header:	(4 Byte)
 			1 Byte type		-> 0 "normal on everyone in channel"  ->1:  json     ->2: checkAlive
-			3 Byte length (either JSON if present or DATA, use JSON entry instead)
+			3 Byte length (either JSON if present or DATA, use JSON entry instead
 	*/
 	
 	constructor() {
@@ -51,40 +51,76 @@ class Wrapper {
 		client.bytesReceived += data.copy(client.buffer, client.bytesReceived)
 
 		//either wait until packet is there, or start processing new data
-		while (true) {
+		let run = true;
+		while (run) {
 			if (client.receiving) {
-				if (client.receiving.json && client.receiving.json.l) {	//got json, look if everything got send
-					if (client.bytesReceived >= client.receiving.json.l) {	//check if second block is fully received
-						client.receiving.data = client.buffer.slice(0, client.receiving.json.l).toString()
-						client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
+				switch(client.receiving.type){
+					case 0:
+						if(client.bytesReceived >= client.receiving.length){		//check if full json is 
+							let json = client.buffer.slice(0, client.receiving.length).toString()
+							//slice
+							client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
+							try {
+								client.receiving.json = JSON.parse(json);
+							} catch(err) {
+								destroySocket(client, "JSON_malformed")
+								_log("[JSON] error:", json)
+								return
+							}
+							if(client.bytesReceived >= client.receiving.json.l){
+								client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()				//TODO: why toString()?
+								client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
+							}else{
+								run = false
+							}
+						}else{
+							run = false
+						}
+					break;
+					case 1:
+						if(client.bytesReceived >= (client.receiving.length + 3)){		//check if full data is received
+							let u = client.buffer.readUInt8(0) * 256 * 256 + client.buffer.readUInt8(1) * 256 + client.buffer.readUInt8(2)
+							client.bytesReceived = client.buffer.copy(client.buffer, 0, 3, client.bytesReceived)	//cut away user
 
-						//pass to nooby
-						this.callbacks.receive(client, client.receiving)
-						client.receiving = false
-					} else {
-						break
-					}
-				} else if (client.bytesReceived >= client.receiving.length) {	//check if first block is fully received
-					let json = client.buffer.slice(0, client.receiving.length)
-					try {
-						client.receiving.json = JSON.parse(json.toString());
-					} catch(err) {
-						destroySocket(client, "JSON_malformed")
-						_log("[JSON] error:",json)
-					}
-					//no data block, return message
-					if (!client.receiving.json.l) {
-						client.receiving.length_data = 0
-						this.callbacks.receive(client, client.receiving)
-						client.receiving = false
-					} else {
-						client.receiving.length_data = client.receiving.json.l
-					}
-
-					//slice
-					client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
-				} else {
-					break
+							client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()				//TODO: why toString()?
+							client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
+						}else{
+							run = false
+						}
+					break;
+					case 2:
+						if(client.bytesReceived >= client.receiving.length){		//check if full data is received
+							client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()				//TODO: why toString()?
+							client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
+						}else{
+							run = false
+						}
+					break;
+					case 3:
+						if(client.bytesReceived >= client.receiving.length){		//check if full data is received
+							let json = client.buffer.slice(0, client.receiving.length).toString()
+							//slice
+							client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
+							try {
+								client.receiving.json = JSON.parse(json);
+							} catch(err) {
+								destroySocket(client, "JSON_malformed")
+								_log("[JSON] error:", json)
+								return
+							}
+						}else{
+							run = false
+						}
+					break;
+					case 4:
+						client.receiving.iii = client.receiving.length
+						client.receiving.length = null
+					break;
+				}
+				if(run){
+					//pass to nooby
+					this.callbacks.receive(client, client.receiving)
+					client.receiving = false
 				}
 			} else {
 				//wait for first 4 bytes
