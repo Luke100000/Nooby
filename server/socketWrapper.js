@@ -63,7 +63,7 @@ class Wrapper {
 							try {
 								client.receiving.json = JSON.parse(json);
 							} catch(err) {
-								destroySocket(client, "JSON_malformed")
+								this.destroySocket(client, "JSON_malformed")
 								_log("[JSON] error:", json)
 								return
 							}
@@ -104,7 +104,7 @@ class Wrapper {
 							try {
 								client.receiving.json = JSON.parse(json);
 							} catch(err) {
-								destroySocket(client, "JSON_malformed")
+								this.destroySocket(client, "JSON_malformed")
 								_log("[JSON] error:", json)
 								return
 							}

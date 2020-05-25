@@ -17,17 +17,19 @@ class SocketWEB {
             wrapper.newClient(socket)
 
             socket.on('message', function(message) {
-              //console.log('Received Message:', message.binaryData);
-              wrapper.receive(socket, dataRaw)
+              console.log('[WEB] Received Message:', message, message.binaryData);
+              wrapper.receive(socket, message.binaryData)
             });
             socket.on('close', function(reasonCode, description) {
-                console.log('Client has disconnected.');
+                console.log('[WEB] Client has disconnected.');
             });
 
             socket.type = "WEB"
 
             socket.send = function(client, data) {      //data must be a buffer!
-                client.sendBytes(data)
+                let buf = Buffer.from(data)
+                console.log("[WEB] send", buf)
+                client.sendBytes(buf)
             }
         }); //end of serverTCP.on 'request'
         serverHTTP.on('listening', function(){console.log('[WEB] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)})

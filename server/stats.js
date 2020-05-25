@@ -61,10 +61,9 @@ function msToTime(duration) {
 }
 
 var stats_daySave = function(){		//save stats every day @23:59:59
-	var midnight = new Date();
-	midnight.setHours(24,0,0,0); 
-	var now = new Date();
-	var msToMidnight = midnight - now - 1000;	//one second before midnight
+	var midnight = new Date(); midnight.setHours(24,0,0,0); 
+	let now = new Date();
+	let msToMidnight = midnight - now - 1000;	//one second before midnight
 	if(msToMidnight < 0)
 		msToMidnight = msToMidnight + midnight
 	setTimeout(stats_daySave, msToMidnight);	//reset timer
