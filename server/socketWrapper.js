@@ -113,7 +113,7 @@ class Wrapper {
 						}
 					break;
 					case 4:
-						client.receiving.iii = client.receiving.length
+						client.receiving.i = client.receiving.length
 						client.receiving.length = null
 					break;
 				}
@@ -158,6 +158,7 @@ class Wrapper {
 		let type = 0
 		let data = ""
 
+		msg.json.l=msg.data.length
 		let data_json = JSON.stringify(msg.json);
 
 		let l = data_json.length
