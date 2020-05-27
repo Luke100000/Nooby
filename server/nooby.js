@@ -20,42 +20,52 @@
 **/
 
 //definitions
-mainPath = "./server/";//"/src/";
+mainPath = "./server/";
+stats =  require("./stats.js");
+stats.load();
 
 cfg = {
-	buffer_size: 1024 * 32, // buffer allocated per each socket client
-	verbose: true, 			// set to true to capture lots of debug info
-	verbose_adv: false,
+    buffer_size: 1024 * 32, // buffer allocated per each socket client
+    verbose: true,             // set to true to capture lots of debug info
+    verbose_adv: false,        // advanced debug info in console
 
-	portTCP:	25000,
-	portUDP:	25001,
-	portWEB:	25002,
-	bufferSize: 1024 * 64,
+    portTCP:    25000,
+    portUDP:    25001,
+    portWEB:    25002,
+    bufferSize: 1024 * 64,
 }
 
 var callbacks = {
-	receive: function(client, msg) {
-		_log(msg)
-		socketWrapper.send(client, {lol:"hallo"}, "bimbo")
-	},
+    receive: function(client, msg) {
+        _log(msg)
+        //stats.add("dataIn",4+msg.data.length+msg.json_data.length)        //TODO different cases
+        stats.add("msgIn", 1)
+        socketWrapper.send(client, {lol:"hallo"}, "bimbo")
+    },
 
-	newClient: function(client) {
-		
-	},
+    send: function(client, json, data){
+        stats.add("msgOut", 1)
+        //stats.add("dataOut", 4+JSON.stringify())    //TODO different cases
+        socketWrapper.send(client, json, data)
+    },
 
-	destroySocket: function(client, info) {
-		
-	},
+    newClient: function(client) {
+        stats.add("users", 1)
+    },
+
+    destroySocket: function(client, info) {
+        
+    },
 }
 
 //logger
 _log = function () {
-	if (cfg.verbose) console.log.apply(console, arguments)
+    if (cfg.verbose) console.log.apply(console, arguments)
+}
+_logAdv = function () {
+    if (cfg.verbose_adv) console.log.apply(console, arguments)
 }
 
-
-stats =  require("./stats.js");
-stats.load();
 
 let Wrapper = require('./socketWrapper.js').Wrapper
 socketWrapper = new Wrapper(cfg, callbacks)
@@ -67,10 +77,10 @@ channel = {}
 
 //Shutdown Events with automatical save
 process.on('exit', function () {
-	console.log('[exit] routine start');
-	stats.save();
-	socketWrapper.shutdown();		//shutdown sockets
-	console.log('[exit] routine end');
+    console.log('[exit] routine start');
+    stats.save();
+    socketWrapper.shutdown();        //shutdown sockets
+    console.log('[exit] routine end');
 });
 
 //process.on('uncaughtException', function() { process.exit();});  //go to process.on("exit")

@@ -17,18 +17,17 @@ class SocketWEB {
             wrapper.newClient(socket)
 
             socket.on('message', function(message) {
-              console.log('[WEB] Received Message:', message, message.binaryData);
-              wrapper.receive(socket, message.binaryData)
+                wrapper.receive(socket, message.binaryData)
             });
             socket.on('close', function(reasonCode, description) {
                 console.log('[WEB] Client has disconnected.');
+                wrapper.destroySocket(socket)
             });
 
             socket.type = "WEB"
 
             socket.send = function(client, data) {      //data must be a buffer!
                 let buf = Buffer.from(data)
-                console.log("[WEB] send", buf)
                 client.sendBytes(buf)
             }
         }); //end of serverTCP.on 'request'
