@@ -37,6 +37,7 @@ class nooby{
         this.connection = new WebSocket('ws://'+ip+":"+port, ['soap', 'xmpp']);
         //send
         this.send = function(data){
+            if(noobyClient.connection.readyState == 3) this.init(wrapper, ip, port)
             if(noobyClient.connection.readyState != 1) return;
             this.connection.send(data)
         }
@@ -49,6 +50,17 @@ class nooby{
         this.connection.onerror = function (error) {
             console.log('WebSocket Error ' + error);
         };
+        this.subscribe = function(channel){
+
+        }
+        this.ping = function(){
+            var buffer = new ArrayBuffer(4);
+            var bufView = new Uint8Array(buffer);
+            bufView[0] = 4;
+            bufView[1] = 0; bufView[2] = 0; bufView[3] = 0;
+            this.send(buffer)
+        }
+        self = this
         // Log messages from the server
         this.connection.onmessage = function (e) {
             var msg = {};
@@ -76,20 +88,14 @@ class nooby{
                     break;
                     case 4:
                         msg.i = length
+                        if(msg.i==0){
+                            self.ping();
+                            return
+                        }
                     break;
                 }
                 wrapper.onmessage(msg)
             })();
         };
-    }
-    subscribe = function(channel){
-
-    }
-    ping = function(){
-        var buffer = new ArrayBuffer(4);
-        var bufView = new Uint8Array(buffer);
-        bufView[0] = 4;
-        bufView[1] = 0; bufView[2] = 0; bufView[3] = 0;
-        this.send(buffer)
     }
 }

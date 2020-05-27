@@ -10,6 +10,14 @@ class Msg {
         this.json = {}
     }
 }
+createMsg = function(json, data, i, u){
+    let msg = new Msg()
+    msg.json = json
+    msg.data = data
+    msg.i = i
+    msg.u = u
+    return msg
+}
 
 class Wrapper {
     constructor(cfg, callbacks) {
@@ -23,6 +31,16 @@ class Wrapper {
         new (require("./sockets/tcp.js"))(this, cfg.portTCP)      //include tcp socket
         new (require("./sockets/udp.js"))(this, cfg.portUDP)      //include udp socket
         new (require("./sockets/web.js"))(this, cfg.portWEB)      //include web socket
+
+        setInterval(function(wrapper){
+            _log("checkAlive for devices:"+wrapper.clients.length)
+            let now = new Date();
+            wrapper.clients.forEach(function(client){
+                if (now - client.lastMsg > cfg.checkAlive){
+                    wrapper.checkAlive(client)
+                }
+            })
+        }, cfg.checkAlive, this)
     }
     
     //generate unique ids
@@ -35,13 +53,16 @@ class Wrapper {
         client.buffer = Buffer.allocUnsafe(cfg.bufferSize);
         client.bytesReceived = 0
 
+        client.lastMsg = new Date();
+
         this.clients.push(client)
         this.callbacks.newClient(client)
     }
 
     checkAlive = function(client) {
-        var MSGSendAlive = ""            //TODO
-        sendClient(client, MSGSendAlive)
+        let msg = createMsg(null, null, 0, null)
+        let packet = this.msgToPacket(msg)
+        this.sendPacket(client, packet)
     }
     
     receive = function(client, data) {
@@ -148,21 +169,39 @@ class Wrapper {
 
     destroySocket = function(client, info) {
         let i = this.clients.indexOf(client)
-        if (i = null) {
+        if (i != null) {
             this.clients.splice(i)
-            callbacks.destroySocket(client, info)
+            this.callbacks.destroySocket(client, info)
         }
     }
 
     msgToPacket = function(msg) {
+        let isEmptyJSON = function(json){
+            try{
+            if(json == null)
+                return true
+            if(json.isEmpty())
+                return true
+            }catch(err){ return true}
+            return false
+        }
+        let isEmptyString = function(str){
+            if(str == null)
+                return true
+            if(!str)
+                return true
+            return false
+        }
         let type = 0
         let data = ""
 
         //calculate type        //TODO: controll that. for example msg.json is empty if '{}' or null; data could be "" or null
-        if(msg.json && msg.data)    type = 0
-        else if(msg.u && msg.data)  type = 1
-        else if(msg.data)           type = 2
-        else if(msg.json)           type = 3
+        if(!isEmptyJSON(msg.json) && !isEmptyString(msg.data))     type = 0
+        else if(msg.u && msg.data)                                 type = 1
+        else if(msg.data)                                          type = 2
+        else if(!isEmptyJSON(msg.json))                            type = 3
+        else if(msg.i != null)                                     type = 4
+        else{ console.log("[ERROR] could not auto find type"); return;}
 
         switch(type){
             case 0:
@@ -172,27 +211,31 @@ class Wrapper {
                 data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
                 data += data_json + msg.data
             break;
-            case 1:
-                let u = 0       //TODO: set u; how?
+            case 1:{
+                let u = msg.u
                 let l = msg.data.length
                 data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
                 data += String.fromCharCode(Math.floor(u / 65536)) + String.fromCharCode(Math.floor(u / 256) % 256) + String.fromCharCode(u % 256);
                 data += msg.data
+                }
             break;
-            case 2:
+            case 2:{
                 let l = msg.data.length
                 data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
                 data += msg.data
+                }
             break;
-            case 3:
+            case 3:{
                 let data_json = JSON.stringify(msg.json)
                 let l = data_json.length
                 data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
                 data += data_json
+                }
             break;
-            case 4:
-                let i = 0;      //TODO: set i; how?
+            case 4:{
+                let i = msg.i
                 data = String.fromCharCode(type) + String.fromCharCode(Math.floor(i / 65536)) + String.fromCharCode(Math.floor(i / 256) % 256) + String.fromCharCode(i % 256);
+                }
             break;
         }
 
@@ -200,21 +243,16 @@ class Wrapper {
     }
     
     send = function(client, json, data) {
-        let msg = new Msg()
-        msg.json = json
-        msg.data = data
-        client.send(client, this.msgToPacket(msg))
+        let msg = createMsg(json, data, null, null)
+        if(msg != null)
+            client.send(client, this.msgToPacket(msg))
+    }
+
+    sendPacket = function(client, packet){
+        if(packet != null)
+            client.send(client, packet)
     }
 }
-
-setInterval(function(){
-    var now = new Date();
-    for (client in this.clients) {
-        if (client.lastMsg - now > 10*1000){
-            checkAlive(client)
-        }
-    }
-}, 10*1000)
 
 module.exports = {
     Wrapper,

@@ -2,7 +2,7 @@ var noobyClient = new nooby;
 
 var wrapper = {
     onmessage: function(msg){
-        console.log("[nooby] data received", msg.json, msg.data)
+        console.log("[nooby] data received", msg)
     }
 }
 
