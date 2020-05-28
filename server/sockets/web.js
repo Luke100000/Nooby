@@ -7,31 +7,31 @@ class SocketWEB {
             httpServer: serverHTTP
         });
 
-        serverWEB.on('request', function(request) {
+        serverWEB.on('request', function (request) {
             var socket = request.accept(null, request.origin);
             socket.isConnected = true
-            socket.connectionId = wrapper.getID()
-            _log('[WEB] New client: ' + socket.connectionId + ' at ' + (new Date().toISOString()))
 
             //register client
             wrapper.newClient(socket)
 
-            socket.on('message', function(message) {
+            socket.on('message', function (message) {
                 wrapper.receive(socket, message.binaryData)
             });
-            socket.on('close', function(reasonCode, description) {
+            socket.on('close', function (reasonCode, description) {
                 console.log('[WEB] Client has disconnected.');
                 wrapper.destroySocket(socket)
             });
 
             socket.type = "WEB"
 
-            socket.send = function(client, data) {      //data must be a buffer!
+            socket.send = function (client, data) {      //data must be a buffer!
                 let buf = Buffer.from(data)
                 client.sendBytes(buf)
             }
         }); //end of serverTCP.on 'request'
-        serverHTTP.on('listening', function(){console.log('[WEB] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)})
+        serverHTTP.on('listening', function () {
+            console.log('[WEB] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)
+        })
         serverHTTP.listen(port);
     }
 }

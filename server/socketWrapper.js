@@ -1,145 +1,104 @@
 class Msg {
-    /*
-        Header:    (4 Byte)
-            1 Byte type        -> 0 "normal on everyone in channel"  ->1:  json     ->2: checkAlive
-            3 Byte length (either JSON if present or DATA, use JSON entry instead
-    */
-    
-    constructor() {
-        this.data = false
-        this.json = {}
+    constructor(json, data) {
+        this.length = 0    //length of header
+        this.size = 0      //length of data segment
+        this.json = json   //header
+        this.data = data   //data segment
     }
-}
-createMsg = function(json, data, i, u){
-    let msg = new Msg()
-    msg.json = json
-    msg.data = data
-    msg.i = i
-    msg.u = u
-    return msg
 }
 
 class Wrapper {
     constructor(cfg, callbacks) {
         this.clients = []
         this.lastID = 0
-        this.cfg = {}
-        
+
         this.cfg = cfg
         this.callbacks = callbacks
-        
+
         new (require("./sockets/tcp.js"))(this, cfg.portTCP)      //include tcp socket
         new (require("./sockets/udp.js"))(this, cfg.portUDP)      //include udp socket
         new (require("./sockets/web.js"))(this, cfg.portWEB)      //include web socket
 
-        setInterval(function(wrapper){
-            _log("checkAlive for devices:"+wrapper.clients.length)
+        setInterval(function (self) {
+            self.callbacks._log("checkAlive for devices:" + self.clients.length)
             let now = new Date();
-            wrapper.clients.forEach(function(client){
-                if (now - client.lastMsg > cfg.checkAlive){
-                    wrapper.checkAlive(client)
+            self.clients.forEach(function (client) {
+                if (now - client.lastMsg > cfg.checkAlive) {
+                    self.checkAlive(client)
                 }
             })
         }, cfg.checkAlive, this)
     }
-    
+
     //generate unique ids
-    getID = function() {
+    getID = function () {
         this.lastID++;
         return this.lastID;
     }
 
-    newClient = function(client) {
-        client.buffer = Buffer.allocUnsafe(cfg.bufferSize);
+    newClient = function (client) {
+        let self = this
+
+        client.buffer = Buffer.allocUnsafe(this.cfg.bufferSize);
         client.bytesReceived = 0
 
         client.lastMsg = new Date();
+
+        client.userId = self.getID()
+        this.callbacks._log("New client: " + client.userId + " at " + (new Date().toISOString()))
 
         this.clients.push(client)
         this.callbacks.newClient(client)
     }
 
-    checkAlive = function(client) {
-        let msg = createMsg(null, null, 0, null)
-        let packet = this.msgToPacket(msg)
-        this.sendPacket(client, packet)
+    checkAlive = function (client) {
+        let self = this
+
+        let packet = self.msgToPacket(new Msg())
+        self.sendPacket(client, packet)
     }
-    
-    receive = function(client, data) {
+
+    receive = function (client, data) {
+        let self = this
+
         client.lastMsg = new Date();
 
         //append data
         client.bytesReceived += data.copy(client.buffer, client.bytesReceived)
 
-        //either wait until packet is there, or start processing new data
-        let run = true;
-        while (run) {
+        //either wait until packet is there or start processing new data
+        while (true) {
             if (client.receiving) {
-                switch(client.receiving.type){
-                    case 0:
-                        if(client.bytesReceived >= client.receiving.length){        //check if full json is 
-                            let json = client.buffer.slice(0, client.receiving.length).toString()
-                            //slice
-                            client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
-                            try {
-                                client.receiving.json = JSON.parse(json);
-                            } catch(err) {
-                                this.destroySocket(client, "JSON_malformed")
-                                _log("[JSON] error:", json)
-                                return
-                            }
-                            if(client.bytesReceived >= client.receiving.json.l){
-                                client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()                //TODO: why toString()?
-                                client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
-                            }else{
-                                run = false
-                            }
-                        }else{
-                            run = false
+                //currently parsing incoming message
+                if (client.receiving.awaiting_json) {
+                    if (client.bytesReceived >= client.receiving.length) {
+                        let json = client.buffer.slice(0, client.receiving.length).toString()
+                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
+                        client.receiving.awaiting_json = false
+                        try {
+                            client.receiving.json = JSON.parse(json);
+                            client.receiving.size = client.receiving.json.l
+                        } catch (err) {
+                            self.destroySocket(client, "JSON_malformed")
+                            this.callbacks._log("[JSON] error:", json)
+                            return
                         }
-                    break;
-                    case 1:
-                        if(client.bytesReceived >= (client.receiving.length + 3)){        //check if full data is received
-                            let u = client.buffer.readUInt8(0) * 256 * 256 + client.buffer.readUInt8(1) * 256 + client.buffer.readUInt8(2)
-                            client.bytesReceived = client.buffer.copy(client.buffer, 0, 3, client.bytesReceived)    //cut away user
-
-                            client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()                //TODO: why toString()?
-                            client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
-                        }else{
-                            run = false
-                        }
-                    break;
-                    case 2:
-                        if(client.bytesReceived >= client.receiving.length){        //check if full data is received
-                            client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()                //TODO: why toString()?
-                            client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.json.l, client.bytesReceived)
-                        }else{
-                            run = false
-                        }
-                    break;
-                    case 3:
-                        if(client.bytesReceived >= client.receiving.length){        //check if full data is received
-                            let json = client.buffer.slice(0, client.receiving.length).toString()
-                            //slice
-                            client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
-                            try {
-                                client.receiving.json = JSON.parse(json);
-                            } catch(err) {
-                                this.destroySocket(client, "JSON_malformed")
-                                _log("[JSON] error:", json)
-                                return
-                            }
-                        }else{
-                            run = false
-                        }
-                    break;
-                    case 4:
-                        client.receiving.i = client.receiving.length
-                        client.receiving.length = null
-                    break;
-                }
-                if(run){
-                    //pass to nooby
+                    } else {
+                        //wait
+                        break
+                    }
+                } else if (client.receiving.awaiting_data) {
+                    if (client.bytesReceived >= client.receiving.size) {
+                        client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()
+                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.size, client.bytesReceived)
+                        client.receiving.awaiting_data = false
+                    } else {
+                        //wait
+                        break
+                    }
+                } else {
+                    //done
+                    client.receiving.json.cmd = client.receiving.json.c || client.receiving.json.cmd || "msg"
                     this.callbacks.receive(client, client.receiving)
                     client.receiving = false
                 }
@@ -151,11 +110,46 @@ class Wrapper {
 
                     //cut away type and length
                     client.bytesReceived = client.buffer.copy(client.buffer, 0, 4, client.bytesReceived)
-                    
+
                     //start new message
                     client.receiving = new Msg()
-                    client.receiving.type = type
-                    client.receiving.length = length
+
+                    switch (type) {
+                        case 0:
+                            //json and data
+                            client.receiving.length = length
+                            client.receiving.awaiting_json = true
+                            client.receiving.awaiting_data = true
+                            break
+                        case 1:
+                            //client side only
+                            client.destroySocket()
+                            return
+                        case 2:
+                            //data only
+                            client.receiving.length = 0
+                            client.receiving.size = length
+                            client.receiving.awaiting_data = true
+                            break
+                        case 3:
+                            //json only
+                            client.receiving.length = length
+                            client.receiving.awaiting_json = true
+                            break
+                        case 4:
+                            //ping
+                            client.receiving = false
+                            break
+                        case 5:
+                            //tag only
+                            //WIP
+                            client.receiving.length = 0
+                            client.receiving.size = length
+                            client.receiving.awaiting_tag = true
+                            client.receiving.awaiting_data = true
+                            client.destroySocket()
+                            return
+                    }
                 } else {
                     break
                 }
@@ -163,11 +157,15 @@ class Wrapper {
         }
     }
 
-    shutdown = function(){
-        this.clients.forEach(client => this.send(client, {"info":"Nooby shutdown"}, ""));
+    //notify all clients of nooby shutdown
+    shutdown = function () {
+        let self = this
+        this.clients.forEach(client => self.send(client, {"info": "Nooby shutdown"}, ""));
     }
 
-    destroySocket = function(client, info) {
+    //destroys a socket and removes it from the client list
+    destroySocket = function (client, info) {
+        //todo close actual socket to prevent further communication
         let i = this.clients.indexOf(client)
         if (i != null) {
             this.clients.splice(i)
@@ -175,86 +173,91 @@ class Wrapper {
         }
     }
 
-    msgToPacket = function(msg) {
-        let isEmptyJSON = function(json){
-            if(json == null)
+    //pack a msg object into a string
+    msgToPacket = function (msg) {
+        let isEmptyJSON = function (json) {
+            if (json == null) {
                 return true
-            try{
-                if(Object.keys(json).length === 0)
+            } else {
+                try {
+                    return Object.keys(json).length === 0
+                } catch (err) {
+                    console.log(err);
                     return true
-            }catch(err){ console.log(err); return true}
-            return false
+                }
+            }
         }
-        let isEmptyString = function(str){
-            if(str == null)
-                return true
-            if(str == "")
-                return true
-            return false
+
+        let isEmptyString = function (str) {
+            return str == null || str.length === 0;
         }
-        let type = 0
-        let data = ""
 
-        //calculate type        //TODO: controll that. for example msg.json is empty if '{}' or null; data could be "" or null
-        if(!isEmptyJSON(msg.json) && !isEmptyString(msg.data))     type = 0
-        else if(msg.u && !isEmptyString(msg.data))                 type = 1
-        else if(!isEmptyString(msg.data))                          type = 2
-        else if(!isEmptyJSON(msg.json))                            type = 3
-        else if(msg.i != null)                                     type = 4
-        else{ console.log("[ERROR] could not auto find type"); return "";}
+        //converts a positive integer (max 65536) to a 3 bytes string
+        let intTo3Bytes = function (l) {
+            return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
+        }
 
-        switch(type){
+        let no_JSON = isEmptyJSON(msg.json)
+        let no_DATA = isEmptyString(msg.data)
+
+        //determine type
+        let type = -1
+        if (!no_JSON && !no_DATA) {
+            type = 0
+        } else if (no_JSON && !no_DATA) {
+            type = 2
+        } else if (!no_JSON && no_DATA) {
+            type = 3
+        }
+        if (no_JSON && no_DATA) {
+            type = 4 //ping
+        } else {
+            return false;
+        }
+
+        //type char
+        let tc = String.fromCharCode(type);
+
+        //pack
+        let data_json
+        switch (type) {
             case 0:
-                msg.json.l=msg.data.length
-                let data_json = JSON.stringify(msg.json)
-                let l = data_json.length
-                data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
-                data += data_json + msg.data
-            break;
-            case 1:{
-                let u = msg.u
-                let l = msg.data.length
-                data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
-                data += String.fromCharCode(Math.floor(u / 65536)) + String.fromCharCode(Math.floor(u / 256) % 256) + String.fromCharCode(u % 256);
-                data += msg.data
-                }
-            break;
-            case 2:{
-                let l = msg.data.length
-                data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
-                data += msg.data
-                }
-            break;
-            case 3:{
-                let data_json = JSON.stringify(msg.json)
-                let l = data_json.length
-                data = String.fromCharCode(type) + String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
-                data += data_json
-                }
-            break;
-            case 4:{
-                let i = msg.i
-                data = String.fromCharCode(type) + String.fromCharCode(Math.floor(i / 65536)) + String.fromCharCode(Math.floor(i / 256) % 256) + String.fromCharCode(i % 256);
-                }
-            break;
+                msg.json.l = msg.data.length
+                data_json = JSON.stringify(msg.json)
+                return tc + intTo3Bytes(data_json.length) + data_json + msg.data
+            case 1:
+                //user side only
+                return false
+            case 2:
+                return tc + intTo3Bytes(msg.data.length) + msg.data
+            case 3:
+                data_json = JSON.stringify(msg.json)
+                return tc + intTo3Bytes(data_json.length) + data_json
+            case 4:
+                return tc + intTo3Bytes(msg.length)
         }
 
-        return data
-    }
-    
-    send = function(client, json, data) {
-        let packet = this.msgToPacket(createMsg(json, data, null, null))
-        if(msg)
-            client.send(client, packet)
+        //not implemented type
+        return false
     }
 
-    sendPacket = function(client, packet){
-        if(packet)
+    send = function (client, json, data) {
+        let self = this
+        let packet = self.msgToPacket(new Msg(json, data))
+        if (packet) {
             client.send(client, packet)
+            return packet.length
+        } else {
+            return 0
+        }
+    }
+
+    sendPacket = function (client, packet) {
+        client.send(client, packet)
     }
 }
 
 module.exports = {
     Wrapper,
-    Msg
+    Msg,
 }
