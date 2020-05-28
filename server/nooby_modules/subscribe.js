@@ -1,4 +1,18 @@
-var subscribe = function(socket, json, data){
+var subscribe = function(callbacks, client, msg){
+    //Help, please delete when subscribe is finished
+    callbacks.channel       //here are the channels stored
+    callbacks.channelHashmap    //Hashmap[client] = i   >>> channel[i] here is user
+    
+    //if socket was on another channel delete the old reference
+
+    //set new channel
+
+
+
+
+
+    //OLD STUFF >>>>
+
     // if socket was on another channel delete the old reference
     if (socket.channel && sockets[socket.channel] && sockets[socket.channel][socket.connectionId]) {
         delete sockets[socket.channel][socket.connectionId]
@@ -20,7 +34,6 @@ var subscribe = function(socket, json, data){
             return
         }
     }
-    stats.add("users", 1)
     
     //connect client
     sockets[socket.channel][socket.connectionId] = {socket:socket, ID:(channelSettings[socket.channel].level > 0 ? msg.split("=")[1] : socket.connectionId)}

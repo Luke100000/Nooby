@@ -48,18 +48,8 @@ class nooby{
         };
         // Log errors
         this.connection.onerror = function (error) {
-            console.log('WebSocket Error ' + error);
+            console.log('[nooby] WebSocket Error ' + error);
         };
-        this.subscribe = function(channel){
-
-        }
-        this.ping = function(){
-            var buffer = new ArrayBuffer(4);
-            var bufView = new Uint8Array(buffer);
-            bufView[0] = 4;
-            bufView[1] = 0; bufView[2] = 0; bufView[3] = 0;
-            this.send(buffer)
-        }
         self = this
         // Log messages from the server
         this.connection.onmessage = function (e) {
@@ -97,5 +87,15 @@ class nooby{
                 wrapper.onmessage(msg)
             })();
         };
+    }
+    subscribe = function(channel){
+
+    }
+    ping = function(){
+        var buffer = new ArrayBuffer(4);
+        var bufView = new Uint8Array(buffer);
+        bufView[0] = 4;
+        bufView[1] = 0; bufView[2] = 0; bufView[3] = 0;
+        this.send(buffer)
     }
 }

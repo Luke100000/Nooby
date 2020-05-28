@@ -177,18 +177,18 @@ class Wrapper {
 
     msgToPacket = function(msg) {
         let isEmptyJSON = function(json){
-            try{
             if(json == null)
                 return true
-            if(json.isEmpty())
-                return true
-            }catch(err){ return true}
+            try{
+                if(Object.keys(json).length === 0)
+                    return true
+            }catch(err){ console.log(err); return true}
             return false
         }
         let isEmptyString = function(str){
             if(str == null)
                 return true
-            if(!str)
+            if(str == "")
                 return true
             return false
         }
@@ -197,11 +197,11 @@ class Wrapper {
 
         //calculate type        //TODO: controll that. for example msg.json is empty if '{}' or null; data could be "" or null
         if(!isEmptyJSON(msg.json) && !isEmptyString(msg.data))     type = 0
-        else if(msg.u && msg.data)                                 type = 1
-        else if(msg.data)                                          type = 2
+        else if(msg.u && !isEmptyString(msg.data))                 type = 1
+        else if(!isEmptyString(msg.data))                          type = 2
         else if(!isEmptyJSON(msg.json))                            type = 3
         else if(msg.i != null)                                     type = 4
-        else{ console.log("[ERROR] could not auto find type"); return;}
+        else{ console.log("[ERROR] could not auto find type"); return "";}
 
         switch(type){
             case 0:
@@ -243,13 +243,13 @@ class Wrapper {
     }
     
     send = function(client, json, data) {
-        let msg = createMsg(json, data, null, null)
-        if(msg != null)
-            client.send(client, this.msgToPacket(msg))
+        let packet = this.msgToPacket(createMsg(json, data, null, null))
+        if(msg)
+            client.send(client, packet)
     }
 
     sendPacket = function(client, packet){
-        if(packet != null)
+        if(packet)
             client.send(client, packet)
     }
 }

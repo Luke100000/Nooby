@@ -62,14 +62,14 @@ var callbacks = {
         stats.add("dataIn",data)
         stats.add("msgIn", 1)
 
-        if(msg.type == 4){return;}      //check alive messages are from the server
+        if(msg.type == 4){return;}      //check alive messages are from the server; perhaps client want to check if server is online (why?) then there must be a return
 
         if(msg.json_data && msg.json.t){
             try{
                 nm[msg.json.t](callbacks, client, msg)      //TODO
             }
             catch(err){
-                
+                console.log(err)
             }
         }
 
