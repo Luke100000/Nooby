@@ -89,7 +89,7 @@ class Wrapper {
                     }
                 } else if (client.receiving.awaiting_data) {
                     if (client.bytesReceived >= client.receiving.size) {
-                        client.receiving.data = client.buffer.slice(0, client.receiving.length).toString()
+                        client.receiving.data = client.buffer.slice(0, client.receiving.size).toString()
                         client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.size, client.bytesReceived)
                         client.receiving.awaiting_data = false
                     } else {
@@ -98,6 +98,7 @@ class Wrapper {
                     }
                 } else {
                     //done
+                    if(!client.receiving.json) client.receiving.json = {}       //if there is no json, create json
                     client.receiving.json.cmd = client.receiving.json.c || client.receiving.json.cmd || "msg"
                     this.callbacks.receive(client, client.receiving)
                     client.receiving = false
@@ -208,8 +209,7 @@ class Wrapper {
             type = 2
         } else if (!no_JSON && no_DATA) {
             type = 3
-        }
-        if (no_JSON && no_DATA) {
+        } else if (no_JSON && no_DATA) {
             type = 4 //ping
         } else {
             return false;

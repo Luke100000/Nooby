@@ -86,6 +86,8 @@ let callbacks = {
         stats.add("dataIn", data)
         stats.add("msgIn", 1)
 
+        _log(msg)
+
         if (nm[msg.json.cmd]) {
             if (nm[msg.json.cmd].receive) {
                 nm[msg.json.cmd].receive(environment, client, msg)
