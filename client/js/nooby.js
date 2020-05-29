@@ -1,10 +1,10 @@
 /**
  *   _   _  ____   ____  ______     __
  *  | \ | |/ __ \ / __ \|  _ \ \   / /
- *  |  \| | |  | | |  | | |_) \ \_/ / 
- *  | . ` | |  | | |  | |  _ < \   /  
- *  | |\  | |__| | |__| | |_) | | |   
- *  |_| \_|\____/ \____/|____/  |_|   
+ *  |  \| | |  | | |  | | |_) \ \_/ /
+ *  | . ` | |  | | |  | |  _ < \   /
+ *  | |\  | |__| | |__| | |_) | | |
+ *  |_| \_|\____/ \____/|____/  |_|
 
  * Opensource multiplayer and network messaging for CoronaSDK, Moai, Gideros & LÖVE
  *
@@ -17,95 +17,145 @@
  *
  * @license MIT
  *
-**/
+ **/
 
-class nooby{
-    init = function(wrapper, ip, port){
+class nooby {
+    init = function (wrapper, ip, port) {
         self = this
+<<<<<<< HEAD
         this.ip = ip
         this.port = port
         this.connection = new WebSocket('ws://'+ip+":"+port, ['soap', 'xmpp']);
         
+=======
+
+        this.ip = ip
+        this.port = port
+
+        this.connection = new WebSocket('ws://' + ip + ":" + port, ['soap', 'xmpp']);
+
+>>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
         // When the connection is open, send some data to the server
         this.connection.onopen = function () {
             console.log("[nooby] WebSocket is open now.");
         };
+
         // Log errors
         this.connection.onerror = function (error) {
             console.log('[nooby] WebSocket Error ' + error);
         };
+
         // Log messages from the server
         this.connection.onmessage = function (e) {
-            var msg = {};
+            let msg = {};
             (async () => {
                 let buf = await e.data.arrayBuffer();
                 let viewBuf = new DataView(buf);
                 msg.type = viewBuf.getUint8(0);
                 let length = viewBuf.getUint8(1) * 256 * 256 + viewBuf.getUint8(2) * 256 + viewBuf.getUint8(3)
-                switch(msg.type){
-                    case 0:{
-                        let json = self.binary2text(buf.slice(4, 4+length))
+                switch (msg.type) {
+                    case 0: {
+                        let json = self.binary2text(buf.slice(4, 4 + length))
                         msg.json = JSON.parse(json)
-                        msg.data = self.binary2text(buf.slice(4+length, 4+length+1+msg.json.l))
+                        msg.data = self.binary2text(buf.slice(4 + length, 4 + length + 1 + msg.json.l))
                     }
-                    break;
-                    case 1:{
+                        break;
+                    case 1: {
                         msg.user = viewBuf.getUint8(4) * 256 * 256 + viewBuf.getUint8(5) * 256 + viewBuf.getUint8(6)
-                        self.binary2text(buf.slice(7, 7+length))
+                        self.binary2text(buf.slice(7, 7 + length))
                     }
-                    break;
-                    case 2:{
-                        msg.data = self.binary2text(buf.slice(4, 4+length))
+                        break;
+                    case 2: {
+                        msg.data = self.binary2text(buf.slice(4, 4 + length))
                     }
-                    break;
-                    case 3:{
-                        let json = self.binary2text(buf.slice(4, 4+length))
+                        break;
+                    case 3: {
+                        let json = self.binary2text(buf.slice(4, 4 + length))
                         msg.json = JSON.parse(json)
                     }
-                    break;
+                        break;
                     case 4:
                         msg.i = length
-                        if(msg.i==0){
+                        if (msg.i === 0) {
                             self.ping();
                             return
                         }
-                    break;
+                        break;
                 }
                 wrapper.onmessage(msg)
             })();
         };
     }
+
     //send Packet
+<<<<<<< HEAD
     sendPacket = function(data){
         if(noobyClient.connection.readyState == 3) this.init(wrapper, this.ip, this.port)
         if(noobyClient.connection.readyState != 1) return;
+=======
+    sendPacket = function (data) {
+        self = this
+
+        if (noobyClient.connection.readyState === 3) self.init(wrapper, this.ip, this.port)
+        if (noobyClient.connection.readyState !== 1) return;
+
+>>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
         this.connection.send(data)
     }
+
     //send Message
+<<<<<<< HEAD
     send = function(msg){
         let msgpack = this.msgToPacket(msg)
         let binary = this.text2binary(msgpack)
         this.sendPacket(binary)
+=======
+    send = function (msg) {
+        self = this
+
+        let msgPacket = self.msgToPacket(msg)
+        let binary = self.text2binary(msgPacket)
+        console.log(binary)
+        self.sendPacket(binary)
+>>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
     }
-    subscribe = function(channel){
+
+    connect = function (channel) {
 
     }
+<<<<<<< HEAD
     ping = function(){
         this.send({length: 0})
+=======
+
+    ping = function () {
+        self = this
+
+        const buffer = new ArrayBuffer(4);
+        const bufView = new Uint8Array(buffer);
+        bufView[0] = 4;
+        bufView[1] = 0;
+        bufView[2] = 0;
+        bufView[3] = 0;
+        self.sendPacket(buffer)
+>>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
     }
 
     //TOOLS
-    binary2text = function(buf) {
+    binary2text = function (buf) {
         return String.fromCharCode.apply(null, new Uint8Array(buf));
     }
-    text2binary = function(string) {
-        var buf = new ArrayBuffer(string.length); // 2 bytes for each char
-        var bufView = new Uint8Array(buf);
-        for (var i=0, strLen=string.length; i < strLen; i++) {
-            bufView[i] = string.charCodeAt(i);
+
+    text2binary = function (str) {
+        const buf = new ArrayBuffer(str.length); // 2 bytes for each char
+        const bufView = new Uint8Array(buf);
+        let i = 0, strLen = str.length;
+        for (; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
         }
         return buf;
     }
+
     //pack a msg object into a string
     msgToPacket = function (msg) {
         let isEmptyJSON = function (json) {

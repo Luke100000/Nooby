@@ -99,8 +99,10 @@ class Wrapper {
                         break
                     }
                 } else {
+                    //if there is no json, create json
+                    if (!client.receiving.json) client.receiving.json = {}
+
                     //done
-                    if(!client.receiving.json) client.receiving.json = {}       //if there is no json, create json
                     client.receiving.json.cmd = client.receiving.json.c || client.receiving.json.cmd || "msg"
                     this.callbacks.receive(client, client.receiving)
                     client.receiving = false
