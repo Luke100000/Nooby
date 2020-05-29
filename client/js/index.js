@@ -6,7 +6,6 @@ let wrapper = {
     }
 }
 
-<<<<<<< HEAD
 window.onclick = function(){
     let start = new Date().getTime()
     //for(i=0; i<1;i++)
@@ -17,15 +16,6 @@ window.onclick = function(){
     noobyClient.ping()                                  //typ 4
     console.log("finished", (new Date().getTime() - start)+"ms")
     
-=======
-window.onclick = function () {
-    console.log(noobyClient.connection.readyState)
-    let start = new Date().getTime()
-    for (let i = 0; i < 1; i++)
-        noobyClient.send({data: "Hello"})
-    console.log("finished", new Date().getTime() - start)
-
->>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
 }
 
 window.onload = function () {

@@ -22,19 +22,10 @@
 class nooby {
     init = function (wrapper, ip, port) {
         self = this
-<<<<<<< HEAD
         this.ip = ip
         this.port = port
         this.connection = new WebSocket('ws://'+ip+":"+port, ['soap', 'xmpp']);
         
-=======
-
-        this.ip = ip
-        this.port = port
-
-        this.connection = new WebSocket('ws://' + ip + ":" + port, ['soap', 'xmpp']);
-
->>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
         // When the connection is open, send some data to the server
         this.connection.onopen = function () {
             console.log("[nooby] WebSocket is open now.");
@@ -88,57 +79,24 @@ class nooby {
     }
 
     //send Packet
-<<<<<<< HEAD
     sendPacket = function(data){
         if(noobyClient.connection.readyState == 3) this.init(wrapper, this.ip, this.port)
         if(noobyClient.connection.readyState != 1) return;
-=======
-    sendPacket = function (data) {
-        self = this
-
-        if (noobyClient.connection.readyState === 3) self.init(wrapper, this.ip, this.port)
-        if (noobyClient.connection.readyState !== 1) return;
-
->>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
         this.connection.send(data)
     }
 
     //send Message
-<<<<<<< HEAD
     send = function(msg){
         let msgpack = this.msgToPacket(msg)
         let binary = this.text2binary(msgpack)
         this.sendPacket(binary)
-=======
-    send = function (msg) {
-        self = this
-
-        let msgPacket = self.msgToPacket(msg)
-        let binary = self.text2binary(msgPacket)
-        console.log(binary)
-        self.sendPacket(binary)
->>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
     }
 
     connect = function (channel) {
 
     }
-<<<<<<< HEAD
     ping = function(){
         this.send({length: 0})
-=======
-
-    ping = function () {
-        self = this
-
-        const buffer = new ArrayBuffer(4);
-        const bufView = new Uint8Array(buffer);
-        bufView[0] = 4;
-        bufView[1] = 0;
-        bufView[2] = 0;
-        bufView[3] = 0;
-        self.sendPacket(buffer)
->>>>>>> cade286aa8a8f75e6b2af7b695b40659fa7e8284
     }
 
     //TOOLS
