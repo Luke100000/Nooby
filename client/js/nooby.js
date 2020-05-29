@@ -22,6 +22,8 @@
 class nooby{
     init = function(wrapper, ip, port){
         self = this
+        this.ip = ip
+        this.port = port
         this.connection = new WebSocket('ws://'+ip+":"+port, ['soap', 'xmpp']);
         
         // When the connection is open, send some data to the server
@@ -75,7 +77,7 @@ class nooby{
     }
     //send Packet
     sendPacket = function(data){
-        if(noobyClient.connection.readyState == 3) this.init(wrapper, ip, port)
+        if(noobyClient.connection.readyState == 3) this.init(wrapper, this.ip, this.port)
         if(noobyClient.connection.readyState != 1) return;
         this.connection.send(data)
     }
@@ -83,18 +85,13 @@ class nooby{
     send = function(msg){
         let msgpack = this.msgToPacket(msg)
         let binary = this.text2binary(msgpack)
-        console.log(binary)
         this.sendPacket(binary)
     }
     subscribe = function(channel){
 
     }
     ping = function(){
-        var buffer = new ArrayBuffer(4);
-        var bufView = new Uint8Array(buffer);
-        bufView[0] = 4;
-        bufView[1] = 0; bufView[2] = 0; bufView[3] = 0;
-        this.sendPacket(buffer)
+        this.send({length: 0})
     }
 
     //TOOLS

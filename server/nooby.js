@@ -82,11 +82,10 @@ require("fs").readdirSync(nmpath).forEach(function (file) {
 //wrapper callbacks
 let callbacks = {
     receive: function (client, msg) {
-        let data = 4 + msg.data.length + msg.data.size
+        _log(msg)
+        let data = 4 + msg.length || 0 + msg.size || 0
         stats.add("dataIn", data)
         stats.add("msgIn", 1)
-
-        _log(msg)
 
         if (nm[msg.json.cmd]) {
             if (nm[msg.json.cmd].receive) {

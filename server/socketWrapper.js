@@ -20,13 +20,15 @@ class Wrapper {
         new (require("./sockets/web.js"))(this, cfg.portWEB)      //include web socket
 
         setInterval(function (self) {
-            self.callbacks._log("checkAlive for devices:" + self.clients.length)
             let now = new Date();
+            let check = 0
             self.clients.forEach(function (client) {
                 if (now - client.lastMsg > cfg.checkAlive) {
                     self.checkAlive(client)
+                    check++;
                 }
             })
+            self.callbacks._log("checkAlive for devices:" + self.clients.length, "send to:"+check)
         }, cfg.checkAlive, this)
     }
 
