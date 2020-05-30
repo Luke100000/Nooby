@@ -257,7 +257,12 @@ class Wrapper {
     }
 
     sendPacket = function (client, packet) {
-        client.send(client, packet)
+        if(packet){
+            client.send(client, packet)
+            return packet.length
+        }else{
+            return 0
+        }
     }
 }
 

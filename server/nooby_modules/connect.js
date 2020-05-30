@@ -49,7 +49,10 @@ let receive = function(env, client, msg) {
     }
 }
 
+let aliases = ["c"]
+
 module.exports = {
     init,
     receive,
+    aliases,
 }

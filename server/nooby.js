@@ -49,6 +49,13 @@ _logAdv = function () {
 let environment = {
     _log: _log,
 
+    sendPacket: function(client, packet) {
+        length = socketWrapper.sendPacket(client, packet)
+
+        stats.add("msgOut", 1)
+        stats.add("dataOut", length)
+    },
+
     send: function (client, json, data) {
         length = socketWrapper.send(client, json, data)
 
