@@ -33,7 +33,7 @@ class nooby {
 
         // Log errors
         this.connection.onerror = function (error) {
-            console.log('[nooby] WebSocket Error ' + error);
+            console.log('[nooby] WebSocket Error ', error);
         };
 
         // Log messages from the server
@@ -93,7 +93,11 @@ class nooby {
     }
 
     connect = function (channel) {
+        if(channel == null){    //request private channel
+            
+        }else{
 
+        }
     }
     ping = function(){
         this.send({length: 0})

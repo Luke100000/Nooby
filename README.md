@@ -1,6 +1,10 @@
 # Nooby
 Node.js multiplayer message server suitable for client to client applications
 
+[![Project license](https://img.shields.io/github/license/Luke100000/Nooby?style=flat-square)](https://github.com/Luke100000/Nooby/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Luke100000/Nooby?style=flat-square&logo=github)](https://github.com/Luke100000/Nooby/stargazers)
+[![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-blue.svg?style=flat-square&logo=paypal)](https://paypal.me/pools/c/8pAvKwQbHm)
+
 ## Message format
 ### format of incomming message
 `CLLL{json}DATA` (one possibility)
@@ -20,6 +24,10 @@ integer, count up per socket connect, maxed to 3 bytes (256^3)
 ## usage Server
 
 ## usage Client
+connect to channel: `JSON:{c:"connect"}` Host get random ChannelID
+
+connect to channel with name: `JSON:{c:"connect", "channel":"channelname"}` Host conenct to channel with name channelname
+
 
 ### lua
 
