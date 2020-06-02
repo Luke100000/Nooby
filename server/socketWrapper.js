@@ -202,6 +202,16 @@ class Wrapper {
             return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
         }
 
+        if(!isEmptyJSON(msg.json))
+            delete msg.json.cmd //delete cmd. should not send to user
+
+        //extract send user
+        let user = false
+        if(!isEmptyJSON(msg.json)){
+            user = msg.json.user
+            delete msg.json.user
+        }
+
         let no_JSON = isEmptyJSON(msg.json)
         let no_DATA = isEmptyString(msg.data)
 
@@ -209,6 +219,8 @@ class Wrapper {
         let type = -1
         if (!no_JSON && !no_DATA) {
             type = 0
+        } else if (user && !no_DATA){
+            type = 1
         } else if (no_JSON && !no_DATA) {
             type = 2
         } else if (!no_JSON && no_DATA) {
@@ -230,8 +242,7 @@ class Wrapper {
                 data_json = JSON.stringify(msg.json)
                 return tc + intTo3Bytes(data_json.length) + data_json + msg.data
             case 1:
-                //user side only
-                return false
+                return tc + intTo3Bytes(msg.data.length) + intTo3Bytes(user) + msg.data
             case 2:
                 return tc + intTo3Bytes(msg.data.length) + msg.data
             case 3:

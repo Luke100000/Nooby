@@ -15,13 +15,12 @@ let testTypes = function(){
 }
 
 let testChannel = function(){
-    
+    noobyClient.connect()
+    noobyClient.send({data:"Hello"})
 }
 
 let test = function(){
     let start = new Date().getTime()
-    //for(i=0; i<1;i++)
-    
     console.log("finished", (new Date().getTime() - start)+"ms")
     
 }

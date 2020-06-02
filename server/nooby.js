@@ -48,6 +48,7 @@ _logAdv = function () {
 //module data and methods environment
 let environment = {
     _log: _log,
+    Msg: require('./socketWrapper.js').Msg,
 
     sendPacket: function(client, packet) {
         length = socketWrapper.sendPacket(client, packet)

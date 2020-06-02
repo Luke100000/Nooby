@@ -53,7 +53,7 @@ class nooby {
                         break;
                     case 1: {
                         msg.user = viewBuf.getUint8(4) * 256 * 256 + viewBuf.getUint8(5) * 256 + viewBuf.getUint8(6)
-                        self.binary2text(buf.slice(7, 7 + length))
+                        msg.data = self.binary2text(buf.slice(7, 7 + length))
                     }
                         break;
                     case 2: {
@@ -93,11 +93,10 @@ class nooby {
     }
 
     connect = function (channel) {
-        if(channel == null){    //request private channel
-            
-        }else{
-
-        }
+        if(channel != null)
+            this.send({json:{"cmd":"c", "channel":channel}})
+        else
+            this.send({json:{"cmd":"c", "channel":""}})
     }
     ping = function(){
         this.send({length: 0})
