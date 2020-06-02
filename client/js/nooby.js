@@ -24,8 +24,8 @@ class nooby {
         self = this
         this.ip = ip
         this.port = port
-        this.connection = new WebSocket('ws://'+ip+":"+port, ['soap', 'xmpp']);
-        
+        this.connection = new WebSocket('ws://' + ip + ":" + port, ['soap', 'xmpp']);
+
         // When the connection is open, send some data to the server
         this.connection.onopen = function () {
             console.log("[nooby] WebSocket is open now.");
@@ -79,27 +79,31 @@ class nooby {
     }
 
     //send Packet
-    sendPacket = function(data){
-        if(noobyClient.connection.readyState == 3) this.init(wrapper, this.ip, this.port)
-        if(noobyClient.connection.readyState != 1) return;
+    sendPacket = function (data) {
+        self = this
+        if (noobyClient.connection.readyState === 3) self.init(wrapper, this.ip, this.port)
+        if (noobyClient.connection.readyState !== 1) return;
         this.connection.send(data)
     }
 
     //send Message
-    send = function(msg){
-        let msgpack = this.msgToPacket(msg)
-        let binary = this.text2binary(msgpack)
-        this.sendPacket(binary)
+    send = function (msg) {
+        self = this
+        let msgpack = self.msgToPacket(msg)
+        let binary = self.text2binary(msgpack)
+        self.sendPacket(binary)
     }
 
     connect = function (channel) {
-        if(channel != null)
-            this.send({json:{"cmd":"c", "channel":channel}})
+        self = this
+        if (channel != null)
+            self.send({json: {"cmd": "c", "channel": channel}})
         else
-            this.send({json:{"cmd":"c", "channel":""}})
+            self.send({json: {"cmd": "c", "channel": ""}})
     }
-    ping = function(){
-        this.send({length: 0})
+    ping = function () {
+        self = this
+        self.send({length: 0})
     }
 
     //TOOLS

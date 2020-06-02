@@ -1,26 +1,26 @@
-let init = function(env) {
+let init = function (env) {
     env.channels = {}
     env.clientChannel = {}
     env.clientChannelTags = {}
     env.lastChannelId = 0
 }
 
-let receive = function(env, client, msg) {
+let receive = function (env, client, msg) {
     let clientChannel = env.clientChannel[client.userId]
-    let tags = env.clientChannelTags[client.userId]
 
     //disconnect from old channel
-    if (clientChannel){
+    if (clientChannel) {
         let channel = env.channels[clientChannel]
         let i = channel.clients.indexOf(client)
         channel.clients.splice(i)
     }
 
     //reset client data
-    tags = {}
+    let tags = {}
+    env.clientChannelTags[client.userId] = tags
 
     //set new channel name, or random if no name specified
-    if (msg.channel && msg.channel.length()>0) {
+    if (msg.channel && msg.channel.length > 0) {
         clientChannel = msg.channel.toString()
     } else {
         clientChannel = env.lastChannelId.toString()
@@ -32,15 +32,15 @@ let receive = function(env, client, msg) {
 
     //create new channel if not existing
     if (env.channels[clientChannel] == null) {
-        let c = {
+        env.channels[clientChannel] = {
             name: msg.channel || msg.name || clientChannel, //public name, in case of public channel its id
             description: msg.channel == null && msg.description || "public",
             //password, public, slots, ...
             clients: [],
         }
-        env.channels[clientChannel] = c
-        _log("channel created:",clientChannel)
-        stats.add("channels", 1)
+
+        env._log("channel created:", clientChannel)
+        env.stats.add("channels", 1)
     }
 
     let c = env.channels[clientChannel]
@@ -51,9 +51,9 @@ let receive = function(env, client, msg) {
     //notify admins
     for (const pair of c.clients) {
         let tagsClient = env.clientChannelTags[pair.userId]
-        if(tagsClient){
+        if (tagsClient) {
             if (tagsClient.admin) {
-                env.send(pair, {c:"connected", user:client.userId})
+                env.send(pair, {c: "connected", user: client.userId})
             }
         }
     }

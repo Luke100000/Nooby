@@ -50,7 +50,10 @@ let environment = {
     _log: _log,
     Msg: require('./socketWrapper.js').Msg,
 
-    sendPacket: function(client, packet) {
+    msgToPacket: socketWrapper.msgToPacket,
+    stats: stats,
+
+    sendPacket: function (client, packet) {
         length = socketWrapper.sendPacket(client, packet)
 
         stats.add("msgOut", 1)

@@ -202,9 +202,6 @@ class Wrapper {
             return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
         }
 
-        if(!isEmptyJSON(msg.json))
-            delete msg.json.cmd //delete cmd. should not send to user
-
         //extract send user
         let user = false
         if(!isEmptyJSON(msg.json)){
