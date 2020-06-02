@@ -24,9 +24,9 @@ integer, count up per socket connect, maxed to 3 bytes (256^3)
 ## usage Server
 
 ## usage Client
-connect to channel: `JSON:{c:"connect"}` Host get random ChannelID
+connect to channel: `JSON:{"cmd":"connect"}` Host get random ChannelID
 
-connect to channel with name: `JSON:{c:"connect", "channel":"channelname"}` Host connect to channel with name channelname
+connect to channel with name: `JSON:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
 
 
 ### lua

@@ -7,8 +7,31 @@ class Msg {
     }
 }
 
+let isEmptyJSON = function (json) {
+    if (json == null) {
+        return true
+    } else {
+        try {
+            return Object.keys(json).length === 0
+        } catch (err) {
+            console.log(err);
+            return true
+        }
+    }
+}
+
+let isEmptyString = function (str) {
+    return str == null || str.length === 0;
+}
+
+//converts a positive integer (max 65536) to a 3 bytes string
+let intTo3Bytes = function (l) {
+    return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
+}
+
 class Wrapper {
     constructor(cfg, callbacks) {
+        if(cfg == null && callbacks == null) return
         this.clients = []
         this.lastID = 0
 
@@ -180,28 +203,6 @@ class Wrapper {
 
     //pack a msg object into a string
     msgToPacket = function (msg) {
-        let isEmptyJSON = function (json) {
-            if (json == null) {
-                return true
-            } else {
-                try {
-                    return Object.keys(json).length === 0
-                } catch (err) {
-                    console.log(err);
-                    return true
-                }
-            }
-        }
-
-        let isEmptyString = function (str) {
-            return str == null || str.length === 0;
-        }
-
-        //converts a positive integer (max 65536) to a 3 bytes string
-        let intTo3Bytes = function (l) {
-            return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
-        }
-
         //extract send user
         let user = false
         if(!isEmptyJSON(msg.json)){
