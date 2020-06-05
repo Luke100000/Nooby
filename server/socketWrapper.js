@@ -237,6 +237,7 @@ class Wrapper {
         switch (type) {
             case 0:
                 msg.json.l = msg.data.length
+                msg.json.user = user
                 data_json = JSON.stringify(msg.json)
                 return tc + intTo3Bytes(data_json.length) + data_json + msg.data
             case 1:
@@ -244,6 +245,7 @@ class Wrapper {
             case 2:
                 return tc + intTo3Bytes(msg.data.length) + msg.data
             case 3:
+                msg.json.user = user
                 data_json = JSON.stringify(msg.json)
                 return tc + intTo3Bytes(data_json.length) + data_json
             case 4:

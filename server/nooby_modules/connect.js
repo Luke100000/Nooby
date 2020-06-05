@@ -20,8 +20,8 @@ let receive = function (env, client, msg) {
     env.clientChannelTags[client.userId] = tags
 
     //set new channel name, or random if no name specified
-    if (msg.channel && msg.channel.length > 0) {
-        clientChannel = msg.channel.toString()
+    if (msg.json.channel) {
+        clientChannel = msg.json.channel.toString()
     } else {
         clientChannel = env.lastChannelId.toString()
         env.lastChannelId++
@@ -53,10 +53,13 @@ let receive = function (env, client, msg) {
         let tagsClient = env.clientChannelTags[pair.userId]
         if (tagsClient) {
             if (tagsClient.admin) {
-                env.send(pair, {c: "connected", user: client.userId})
+                if(pair.userId != client.userId)
+                    env.send(pair, {c: "connected", user: client.userId})
             }
         }
     }
+    env.send(client, {c: "connected", channel:clientChannel})
+
     //write
     env.clientChannel[client.userId] = clientChannel
     env.clientChannelTags[client.userId] = tags

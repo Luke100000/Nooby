@@ -15,8 +15,12 @@ let testTypes = function () {
 }
 
 let testChannel = function () {
-    noobyClient.connect()
+    noobyClient.connect("testChannel")
     noobyClient.send({data: "Hello"})
+}
+
+let randomChannel = function(){
+    noobyClient.connect()
 }
 
 let test = function () {

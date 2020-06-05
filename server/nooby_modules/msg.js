@@ -11,9 +11,10 @@ let receive = function (env, client, msg) {
 
         let msgReturn = new env.Msg(json, msg.data);
         let packet = env.msgToPacket(msgReturn)
-        //send packet to everyone in the channel
-        for (const client of env.channels[clientChannel].clients) {
-            env.sendPacket(client, packet)
+        //send packet to everyone in the channel, exclude the sender
+        for (const clientC of env.channels[clientChannel].clients) {
+            if(clientC.userId != client.userId)
+                env.sendPacket(clientC, packet)
         }
     } else {
         //simple ping

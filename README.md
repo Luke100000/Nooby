@@ -24,10 +24,14 @@ integer, count up per socket connect, maxed to 3 bytes (256^3)
 ## usage Server
 
 ## usage Client
-connect to channel: `JSON:{"cmd":"connect"}` Host get random ChannelID
+### synonym JSON:{cmd}
+- c = connect
+- m = msg
 
-connect to channel with name: `JSON:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
-
+### commands
+- connect to channel: `JSON:{"cmd":"connect"}` Host get random ChannelID
+- connect to channel with name: `JSON:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
+- send msg: `JSON:{"cmd":"msg"}DATA` Send message to everyone in the channel, excude you; you will get your data back, if you are not in a channel
 
 ### lua
 
