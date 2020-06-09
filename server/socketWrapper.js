@@ -38,21 +38,24 @@ class Wrapper {
         this.cfg = cfg
         this.callbacks = callbacks
 
-        new (require("./sockets/tcp.js"))(this, cfg.portTCP)      //include tcp socket
-        new (require("./sockets/udp.js"))(this, cfg.portUDP)      //include udp socket
-        new (require("./sockets/web.js"))(this, cfg.portWEB)      //include web socket
+        new (require("./sockets/tcp.js"))(this, cfg.portTCP)        //include tcp socket
+        new (require("./sockets/udp.js"))(this, cfg.portUDP)        //include udp socket
+        new (require("./sockets/web.js"))(this, cfg.portWEB)        //include web socket
 
-        setInterval(function (self) {
-            let now = new Date();
-            let check = 0
-            self.clients.forEach(function (client) {
-                if (now - client.lastMsg > cfg.checkAlive) {
-                    self.checkAlive(client)
-                    check++;
-                }
-            })
-            self.callbacks._log("checkAlive for devices:" + self.clients.length, "send to:"+check)
-        }, cfg.checkAlive, this)
+        if(cfg.checkAlive){                                         //only check alive when defined                                         
+            setInterval(function (self) {
+                let now = new Date();
+                let check = 0
+                self.clients.forEach(function (client) {
+                    if (now - client.lastMsg > cfg.checkAlive) {
+                        self.checkAlive(client)
+                        check++;
+                    }
+                })
+                if(check)
+                    self.callbacks._log("checkAlive for devices:" + self.clients.length, "send to:"+check)
+            }, cfg.checkAlive, this)
+        }
     }
 
     //generate unique ids

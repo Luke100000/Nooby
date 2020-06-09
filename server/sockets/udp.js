@@ -4,8 +4,8 @@ class SocketUDP {
 
         //udp has no client management. everyone can send and receive everytime
         serverUDP.on('connection', function (socket) {
-            socket.setRecvBufferSize(cfg.buffer_size)
-            socket.setSendBufferSize(cfg.buffer_size)
+            socket.setRecvBufferSize(cfg.bufferSize)
+            socket.setSendBufferSize(cfg.bufferSize)
 
             //_log('New client: ' + socket.remoteAddress + ':' + socket.remotePort + ' at ' + (new Date().toISOString()))
             serverUDP.on('message', function (dataRaw, info) {

@@ -60,15 +60,15 @@ function msToTime(duration) {
     return hours + ":" + minutes + ":" + seconds + "." + milliseconds;
 }
 
-var stats_daySave = function () {        //save stats every day @23:59:59
+var stats_daySave = function () {                           //save stats every day @23:59:59
     var midnight = new Date();
     midnight.setHours(24, 0, 0, 0);
     let now = new Date();
-    let msToMidnight = midnight - now - 1000;    //one second before midnight
+    let msToMidnight = midnight - now - 1000;               //one second before midnight
     if (msToMidnight < 0)
-        msToMidnight = msToMidnight + midnight
-    setTimeout(stats_daySave, msToMidnight);    //reset timer
-    console.log("[stats] set DaySave Timeout to " + msToMidnight + "(" + msToTime(msToMidnight) + ")");
+        msToMidnight = msToMidnight + 24*3600*1000;
+    setTimeout(stats_daySave, msToMidnight);                //reset timer
+    console.log("[stats] set DaySave Timeout to " + msToMidnight + " (" + msToTime(msToMidnight) + ")");
 
     if (msToMidnight <= 1000) {
         console.log("[stats] save at Midnight");
@@ -79,11 +79,11 @@ var stats_daySave = function () {        //save stats every day @23:59:59
 var stats_halfHourSave = function (ms) {
     var now = new Date();
     var nextRun = ms - now % ms;
-    setTimeout(stats_halfHourSave, nextRun, ms);    //reset timer
+    setTimeout(stats_halfHourSave, nextRun, ms);            //reset timer
     console.log("[stats] set save Timeout to " + nextRun + "(" + msToTime(nextRun) + ")");
 
     save();
 }
 
-setTimeout(stats_halfHourSave, 1000, 30 * 60 * 1000);    //start first run after 1 second
-setTimeout(stats_daySave, 1000);                    //start first run after 1 second
+setTimeout(stats_halfHourSave, 1000, 30 * 60 * 1000);       //start first run after 1 second
+setTimeout(stats_daySave, 1000);                            //start first run after 1 second

@@ -101,6 +101,7 @@ class nooby {
         else
             self.send({json: {"cmd": "c", "channel": ""}})
     }
+    
     ping = function () {
         self = this
         self.send({length: 0})

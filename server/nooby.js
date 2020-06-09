@@ -25,16 +25,15 @@ stats.load();
 
 //config
 cfg = {
-    buffer_size: 1024 * 32,    // buffer allocated per each socket client
-    verbose: true,             // set to true to capture lots of debug info
-    verbose_adv: false,        // advanced debug info in console
+    verbose: true,              // set to true to capture lots of debug info
+    verbose_adv: false,         // advanced debug info in console
 
     portTCP: 25000,
     portUDP: 25001,
     portWEB: 25002,
-    bufferSize: 1024 * 64,
+    bufferSize: 1024 * 64,      // buffer allocated per each socket client
 
-    checkAlive: 10 * 1000,        // every 10 seconds
+    checkAlive: 10 * 1000,      // check if every client is alive every 10 seconds
 }
 
 //logger

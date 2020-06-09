@@ -25,6 +25,8 @@ let randomChannel = function(){
 
 let test = function () {
     let start = new Date().getTime()
+    for(let i = 0; i < 1000; i++)
+        noobyClient.send({data:"Hello("+i+")"})
     console.log("finished", (new Date().getTime() - start) + "ms")
 
 }
