@@ -14,7 +14,7 @@ let receive = function (env, client, msg) {
         let packet = env.msgToPacket(msgReturn)
         //send packet to everyone in the channel, exclude the sender
         for (const clientC of env.channels[clientChannel].clients) {
-            if(clientC.userId !== client.userId)
+            //if(clientC.userId !== client.userId)
                 env.sendPacket(clientC, packet)
         }
     } else {

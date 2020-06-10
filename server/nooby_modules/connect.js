@@ -66,7 +66,7 @@ let receive = function (env, client, msg) {
         let tagsClient = env.clientChannelTags[client.userId]
         if (tagsClient) {
             if (tagsClient.admin) {
-                if (pair.userId !== client.userId)
+                //if (pair.userId !== client.userId)
                     env.send(pair, {c: "connected", user: client.userId})
             }
         }
