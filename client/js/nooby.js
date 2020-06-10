@@ -19,8 +19,8 @@
  *
  **/
 
-class nooby {
-    init = function (wrapper, ip, port) {
+class nooby{
+    init(wrapper, ip, port) {
         self = this
         this.ip = ip
         this.port = port
@@ -40,7 +40,7 @@ class nooby {
         this.connection.onmessage = function (e) {
             let msg = {};
             (async () => {
-                let buf = await e.data.arrayBuffer();
+                let buf = await self.readBlobAsync(e.data)
                 let viewBuf = new DataView(buf);
                 msg.type = viewBuf.getUint8(0);
                 let length = viewBuf.getUint8(1) * 256 * 256 + viewBuf.getUint8(2) * 256 + viewBuf.getUint8(3)
@@ -78,8 +78,21 @@ class nooby {
         };
     }
 
+    readBlobAsync(blob) {
+        return new Promise((resolve, reject) => {
+            let reader = new FileReader();
+        
+            reader.onload = () => {
+            resolve(reader.result);
+            };
+        
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(blob);
+        })
+    }
+
     //send Packet
-    sendPacket = function (data) {
+    sendPacket(data) {
         self = this
         if (noobyClient.connection.readyState === 3) self.init(wrapper, this.ip, this.port)
         if (noobyClient.connection.readyState !== 1) return;
@@ -87,14 +100,14 @@ class nooby {
     }
 
     //send Message
-    send = function (msg) {
+    send(msg) {
         self = this
         let msgpack = self.msgToPacket(msg)
         let binary = self.text2binary(msgpack)
         self.sendPacket(binary)
     }
 
-    connect = function (channel) {
+    connect(channel) {
         self = this
         if (channel != null)
             self.send({json: {"cmd": "c", "channel": channel}})
@@ -102,17 +115,17 @@ class nooby {
             self.send({json: {"cmd": "c", "channel": ""}})
     }
     
-    ping = function () {
+    ping() {
         self = this
         self.send({length: 0})
     }
 
     //TOOLS
-    binary2text = function (buf) {
+    binary2text(buf) {
         return String.fromCharCode.apply(null, new Uint8Array(buf));
     }
 
-    text2binary = function (str) {
+    text2binary(str) {
         const buf = new ArrayBuffer(str.length); // 2 bytes for each char
         const bufView = new Uint8Array(buf);
         let i = 0, strLen = str.length;
@@ -123,7 +136,7 @@ class nooby {
     }
 
     //pack a msg object into a string
-    msgToPacket = function (msg) {
+    msgToPacket(msg) {
         let isEmptyJSON = function (json) {
             if (json == null) {
                 return true
