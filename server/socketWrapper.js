@@ -33,7 +33,6 @@ class Wrapper {
     constructor(cfg, callbacks) {
         if(cfg == null && callbacks == null) return
         this.clients = []
-        this.lastID = 0
 
         this.cfg = cfg
         this.callbacks = callbacks
@@ -58,12 +57,6 @@ class Wrapper {
         }
     }
 
-    //generate unique ids
-    getID = function () {
-        this.lastID++;
-        return this.lastID;
-    }
-
     newClient = function (client) {
         let self = this
 
@@ -72,7 +65,6 @@ class Wrapper {
 
         client.lastMsg = new Date();
 
-        client.userId = self.getID()
         this.callbacks._log("New client: " + client.userId + " at " + (new Date().toISOString()))
 
         this.clients.push(client)

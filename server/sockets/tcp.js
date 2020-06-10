@@ -24,6 +24,8 @@ class SocketTCP {
 
             socket.type = "TCP"
 
+            socket.ID = socket.remoteAddress
+
             socket.send = function (client, data) {
                 client.write(data)
             }

@@ -1,11 +1,24 @@
+//generate unique ids
 let init = function (env) {
     env.channels = {}
+
     env.clientChannel = {}
     env.clientChannelTags = {}
     env.lastChannelId = 0
+
+    env.lastSessionID = 0;
+    env.lastID = 0;
+    env.userIds = {}
 }
 
 let receive = function (env, client, msg) {
+    //client identifier
+    client.session = client.ID + "_" + (msg.json.session || env.lastSessionID++).toString()
+
+    //assign user ID or create new
+    client.userId = env.userIds[client.session] || env.lastID++
+    env.userIds[client.session] = client.userId
+
     let clientChannel = env.clientChannel[client.userId]
 
     //disconnect from old channel
@@ -50,10 +63,10 @@ let receive = function (env, client, msg) {
 
     //notify admins
     for (const pair of c.clients) {
-        let tagsClient = env.clientChannelTags[pair.userId]
+        let tagsClient = env.clientChannelTags[client.userId]
         if (tagsClient) {
             if (tagsClient.admin) {
-                if(pair.userId != client.userId)
+                if(pair.userId !== client.userId)
                     env.send(pair, {c: "connected", user: client.userId})
             }
         }
