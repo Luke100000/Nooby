@@ -63,10 +63,12 @@ module.exports = {
   - `client` is the client itself. you can read client.userID and so on
   - `msg` is the input message.
     ```js
-    msg{
-        data:"",
-        json:{},
-        cmd:"",
+    Msg{
+      length: 0,
+      size: 10,
+      json: { cmd: 'msg' },
+      data: 'HelloWorld',
+      awaiting_data: false
     }
     ```
 
