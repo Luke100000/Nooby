@@ -31,7 +31,7 @@ let intTo3Bytes = function (l) {
 
 class Wrapper {
     constructor(cfg, callbacks) {
-        if(cfg == null && callbacks == null) return
+        if (cfg == null && callbacks == null) return
         this.clients = []
 
         this.cfg = cfg
@@ -41,7 +41,7 @@ class Wrapper {
         new (require("./sockets/udp.js"))(this, cfg.portUDP)        //include udp socket
         new (require("./sockets/web.js"))(this, cfg.portWEB)        //include web socket
 
-        if(cfg.checkAlive){                                         //only check alive when defined                                         
+        if (cfg.checkAlive) {                                         //only check alive when defined
             setInterval(function (self) {
                 let now = new Date();
                 let check = 0
@@ -51,15 +51,13 @@ class Wrapper {
                         check++;
                     }
                 })
-                if(check)
-                    self.callbacks._log("checkAlive for devices:" + self.clients.length, "send to:"+check)
+                if (check)
+                    self.callbacks._log("checkAlive for devices:" + self.clients.length, "send to:" + check)
             }, cfg.checkAlive, this)
         }
     }
 
     newClient = function (client) {
-        let self = this
-
         client.buffer = Buffer.allocUnsafe(this.cfg.bufferSize);
         client.bytesReceived = 0
 
@@ -200,7 +198,7 @@ class Wrapper {
     msgToPacket = function (msg) {
         //extract send user
         let user = false
-        if(!isEmptyJSON(msg.json)){
+        if (!isEmptyJSON(msg.json)) {
             user = msg.json.user
             delete msg.json.user
         }
@@ -212,7 +210,7 @@ class Wrapper {
         let type = -1
         if (!no_JSON && !no_DATA) {
             type = 0
-        } else if (user && !no_DATA){
+        } else if (user && !no_DATA) {
             type = 1
         } else if (no_JSON && !no_DATA) {
             type = 2
@@ -263,10 +261,10 @@ class Wrapper {
     }
 
     sendPacket = function (client, packet) {
-        if(packet){
+        if (packet) {
             client.send(client, packet)
             return packet.length
-        }else{
+        } else {
             return 0
         }
     }

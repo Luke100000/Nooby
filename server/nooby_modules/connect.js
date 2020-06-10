@@ -66,12 +66,12 @@ let receive = function (env, client, msg) {
         let tagsClient = env.clientChannelTags[client.userId]
         if (tagsClient) {
             if (tagsClient.admin) {
-                if(pair.userId !== client.userId)
+                if (pair.userId !== client.userId)
                     env.send(pair, {c: "connected", user: client.userId})
             }
         }
     }
-    env.send(client, {c: "connected", channel:clientChannel})
+    env.send(client, {c: "connected", channel: clientChannel})
 
     //write
     env.clientChannel[client.userId] = clientChannel

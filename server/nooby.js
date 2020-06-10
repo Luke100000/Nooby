@@ -49,7 +49,7 @@ let environment = {
     _log: _log,
     Msg: require('./socketWrapper.js').Msg,
 
-    msgToPacket: new(require('./socketWrapper.js')).Wrapper(null, null).msgToPacket,
+    msgToPacket: new (require('./socketWrapper.js')).Wrapper(null, null).msgToPacket,
     stats: stats,
 
     sendPacket: function (client, packet) {
