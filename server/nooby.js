@@ -25,7 +25,7 @@ stats.load();
 
 //config
 cfg = {
-    verbose: true,              // set to true to capture lots of debug info
+    verbose: false,              // set to true to capture lots of debug info
     verbose_adv: false,         // advanced debug info in console
 
     portTCP: 25000,

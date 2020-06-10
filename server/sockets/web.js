@@ -25,8 +25,7 @@ class SocketWEB {
             socket.type = "WEB"
 
             socket.send = function (client, data) {      //data must be a buffer!
-                let buf = Buffer.from(data)
-                client.sendBytes(buf)
+                client.sendBytes(data)
             }
         }); //end of serverTCP.on 'request'
         serverHTTP.on('listening', function () {

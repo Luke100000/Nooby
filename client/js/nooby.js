@@ -9,7 +9,7 @@
  * Opensource multiplayer and network messaging for CoronaSDK, Moai, Gideros & LÖVE
  *
  * @usage
- * todo
+ * let noobyClient = new nooby
  *
  * @authors
  * Luke100000
@@ -20,20 +20,22 @@
  **/
 
 class nooby{
-    init(wrapper, ip, port) {
+    init(wrapper, ip, port, compress) {
         self = this
+        this.compress = compress || true
+        if(wrapper.log == null) wrapper.log = console.log
         this.ip = ip
         this.port = port
         this.connection = new WebSocket('ws://' + ip + ":" + port, ['soap', 'xmpp']);
 
         // When the connection is open, send some data to the server
         this.connection.onopen = function () {
-            console.log("[nooby] WebSocket is open now.");
+            wrapper.log("[nooby] WebSocket is open now.");
         };
 
         // Log errors
         this.connection.onerror = function (error) {
-            console.log('[nooby] WebSocket Error ', error);
+            wrapper.log('[nooby] WebSocket Error ', error);
         };
 
         // Log messages from the server
@@ -48,16 +50,16 @@ class nooby{
                     case 0: {
                         let json = self.binary2text(buf.slice(4, 4 + length))
                         msg.json = JSON.parse(json)
-                        msg.data = self.binary2text(buf.slice(4 + length, 4 + length + 1 + msg.json.l))
+                        msg.data = buf.slice(4 + length, 4 + length + msg.json.l)
                     }
                         break;
                     case 1: {
                         msg.user = viewBuf.getUint8(4) * 256 * 256 + viewBuf.getUint8(5) * 256 + viewBuf.getUint8(6)
-                        msg.data = self.binary2text(buf.slice(7, 7 + length))
+                        msg.data = buf.slice(7, 7 + length)
                     }
                         break;
                     case 2: {
-                        msg.data = self.binary2text(buf.slice(4, 4 + length))
+                        msg.data = buf.slice(4, 4 + length)
                     }
                         break;
                     case 3: {
@@ -72,6 +74,16 @@ class nooby{
                             return
                         }
                         break;
+                }
+                //uncompress
+                if(msg.data){
+                    buf = new Uint8Array(msg.data)
+                    if(buf[0] == 4){
+                        msg.data = self.binary2text(lz4.decompress(buf))
+                        msg.json.l = msg.data.length
+                    }
+                    else
+                        msg.data = self.binary2text(msg.data)
                 }
                 wrapper.onmessage(msg)
             })();
@@ -126,8 +138,8 @@ class nooby{
     }
 
     text2binary(str) {
-        const buf = new ArrayBuffer(str.length); // 2 bytes for each char
-        const bufView = new Uint8Array(buf);
+        let buf = new ArrayBuffer(str.length); // 2 bytes for each char
+        let bufView = new Uint8Array(buf);
         let i = 0, strLen = str.length;
         for (; i < strLen; i++) {
             bufView[i] = str.charCodeAt(i);
@@ -144,7 +156,7 @@ class nooby{
                 try {
                     return Object.keys(json).length === 0
                 } catch (err) {
-                    console.log(err);
+                    wrapper.log(err);
                     return true
                 }
             }
@@ -179,6 +191,12 @@ class nooby{
         //type char
         let tc = String.fromCharCode(type);
 
+        //compress
+        if(!no_DATA && this.compress){
+            let buf = lz4.compress(new Uint8Array(this.text2binary(msg.data)))
+            msg.data = this.binary2text(buf)
+        }
+        
         //pack
         let data_json
         switch (type) {

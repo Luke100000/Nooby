@@ -107,7 +107,8 @@ class Wrapper {
                     }
                 } else if (client.receiving.awaiting_data) {
                     if (client.bytesReceived >= client.receiving.size) {
-                        client.receiving.data = client.buffer.slice(0, client.receiving.size).toString()
+                        let buffer = Buffer.from(client.buffer.slice(0, client.receiving.size))
+                        client.receiving.data = buffer
                         client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.size, client.bytesReceived)
                         client.receiving.awaiting_data = false
                     } else {
@@ -227,22 +228,26 @@ class Wrapper {
 
         //pack
         let data_json
+        let buf
         switch (type) {
             case 0:
                 msg.json.l = msg.data.length
                 msg.json.user = user
                 data_json = JSON.stringify(msg.json)
-                return tc + intTo3Bytes(data_json.length) + data_json + msg.data
+                buf = Buffer.from(tc + intTo3Bytes(data_json.length) + data_json)
+                return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
             case 1:
-                return tc + intTo3Bytes(msg.data.length) + intTo3Bytes(user) + msg.data
+                buf = Buffer.from(tc + intTo3Bytes(msg.data.length) + intTo3Bytes(user))
+                return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
             case 2:
-                return tc + intTo3Bytes(msg.data.length) + msg.data
+                buf = Buffer.from(tc + intTo3Bytes(msg.data.length))
+                return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
             case 3:
                 msg.json.user = user
                 data_json = JSON.stringify(msg.json)
-                return tc + intTo3Bytes(data_json.length) + data_json
+                return Buffer.from(tc + intTo3Bytes(data_json.length) + data_json)
             case 4:
-                return tc + intTo3Bytes(msg.length)
+                return Buffer.from(tc + intTo3Bytes(msg.length))
         }
 
         //not implemented type
