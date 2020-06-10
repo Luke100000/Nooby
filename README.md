@@ -34,7 +34,7 @@ cfg = {
 
 ### own Modules
 #### general structure of modules
-filename.js
+myModule.js
 ```js
 let init = function (env) {
     
@@ -65,11 +65,41 @@ module.exports = {
     ```js
     msg{
         data:"",
-        json:"",
+        json:{},
         cmd:"",
     }
     ```
 
+
+## usage Client
+### synonym JSON:{cmd}
+- c = connect
+- m = msg
+
+### commands
+- connect to channel: `JSON:{"cmd":"connect"}` Host get random ChannelID
+- connect to channel with name: `JSON:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
+- send msg: `JSON:{"cmd":"msg"}DATA` Send message to everyone in the channel, excude you; you will get your data back, if you are not in a channel
+
+### lua
+```lua
+local noobyClient = require("nooby")("localhost", "25000")
+
+
+```
+
+### javascript
+```js
+let noobyClient = new nooby;    //define the nooby class
+let wrapper = {                 //with the wrapper you say noobyClient, what to do, when noobyClient gets a message
+    onmessage: function (msg) {
+        console.log("[nooby] data received", msg)
+    }
+}
+noobyClient.init(wrapper, "localhost", "25002");  //initialise the client. The Port must be WebSocket
+
+noobyClient.send(json, data)    //send `json`, and `data`
+```
 
 ## Message format packed
 ### format of incomming message
@@ -86,17 +116,3 @@ And L the length of the next packet, either JSON or DATA (user ID has fixed leng
 
 ### user ID
 integer, count up per socket connect, maxed to 3 bytes (256^3)
-
-## usage Client
-### synonym JSON:{cmd}
-- c = connect
-- m = msg
-
-### commands
-- connect to channel: `JSON:{"cmd":"connect"}` Host get random ChannelID
-- connect to channel with name: `JSON:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
-- send msg: `JSON:{"cmd":"msg"}DATA` Send message to everyone in the channel, excude you; you will get your data back, if you are not in a channel
-
-### lua
-
-### javascript
