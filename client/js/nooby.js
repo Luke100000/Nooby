@@ -20,9 +20,8 @@
  **/
 
 class nooby{
-    init(wrapper, ip, port, compress) {
+    init(wrapper, ip, port) {
         self = this
-        this.compress = compress || true
         if(wrapper.log == null) wrapper.log = console.log
         this.ip = ip
         this.port = port
@@ -77,16 +76,7 @@ class nooby{
                 }
                 //uncompress
                 if(msg.data){
-                    if(buf[0] == 4){
-                        buf = new Uint8Array(msg.data)
-                        let uncompressed = new Buffer(buf.length)
-                        let uncompressedSize = LZ4.decodeBlock(buf, uncompressed)
-                        uncompressed = uncompressed.slice(0, uncompressedSize)
-                        msg.data = self.binary2text(uncompressed.slice(0, uncompressedSize))
-                        msg.json.l = msg.data.length
-                    }
-                    else
-                        msg.data = self.binary2text(msg.data)
+                    msg.data = self.binary2text(msg.data)
                 }
                 wrapper.onmessage(msg)
             })();
@@ -193,14 +183,6 @@ class nooby{
 
         //type char
         let tc = String.fromCharCode(type);
-
-        //compress
-        if(!no_DATA && this.compress){
-            let input = this.text2binary(msg.data);                 // LZ4 can only work on Buffers
-            let output = new Buffer(LZ4.encodeBound(input.length))  // Initialize the output buffer to its maximum length based on the input data
-            let compressedSize = LZ4.encodeBlock(input, output)     // block compression (no archive format)
-            msg.data = this.binary2text(output.slice(0, compressedSize))
-        }
         
         //pack
         let data_json
