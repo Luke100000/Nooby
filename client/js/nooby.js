@@ -77,9 +77,12 @@ class nooby{
                 }
                 //uncompress
                 if(msg.data){
-                    buf = new Uint8Array(msg.data)
                     if(buf[0] == 4){
-                        msg.data = self.binary2text(lz4.decompress(buf))
+                        buf = new Uint8Array(msg.data)
+                        let uncompressed = new Buffer(buf.length)
+                        let uncompressedSize = LZ4.decodeBlock(buf, uncompressed)
+                        uncompressed = uncompressed.slice(0, uncompressedSize)
+                        msg.data = self.binary2text(uncompressed.slice(0, uncompressedSize))
                         msg.json.l = msg.data.length
                     }
                     else
@@ -193,8 +196,10 @@ class nooby{
 
         //compress
         if(!no_DATA && this.compress){
-            let buf = lz4.compress(new Uint8Array(this.text2binary(msg.data)))
-            msg.data = this.binary2text(buf)
+            let input = this.text2binary(msg.data);                 // LZ4 can only work on Buffers
+            let output = new Buffer(LZ4.encodeBound(input.length))  // Initialize the output buffer to its maximum length based on the input data
+            let compressedSize = LZ4.encodeBlock(input, output)     // block compression (no archive format)
+            msg.data = this.binary2text(output.slice(0, compressedSize))
         }
         
         //pack
