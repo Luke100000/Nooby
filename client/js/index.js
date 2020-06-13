@@ -3,7 +3,7 @@ let noobyClient = new nooby;
 let wrapper = {
     onmessage: function (msg) {
         console.log("[nooby] data received", msg)
-        //document.getElementById("console").innerHTML = msg.data
+        document.getElementById("console").innerHTML = msg.data
     },
     log: function(){
         console.log(arguments[0])
@@ -31,7 +31,7 @@ let randomChannel = function(){
 let test = function () {
     let start = new Date().getTime()
     for(let i = 0; i < 100; i++)
-        noobyClient.send({data:"Hellooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo("+i+")"})
+        noobyClient.send({data:"HellooooooooooooABC("+i+")"})
     console.log("finished", (new Date().getTime() - start) + "ms")
 
 }
