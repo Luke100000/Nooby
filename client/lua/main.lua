@@ -1,7 +1,9 @@
---local nooby = require("nooby")("localhost", "25000")
-local nooby = require("nooby")("katzmair.eu", "25000", "testChannel")
+local nooby = require("nooby")("localhost", "25000")
+--local nooby = require("nooby")("katzmair.eu", "25000", "testChannel")
 
 require("json")
+
+nooby:send({c = "tag", tag = "test", tagValue = "hallo"}, {data = key})
 
 log = ""
 
@@ -18,4 +20,6 @@ end
 
 function love.keypressed(key)
 	nooby:send({}, {data = key})
+	nooby:send({tag = "test", tagValue = "hallo"}, {data = key})
+	nooby:send({tags = {["test"] = "hallo"}}, {data = key})
 end

@@ -1,4 +1,3 @@
-//generate unique ids
 let init = function (env) {
     env.channels = {}
 
@@ -60,22 +59,19 @@ let receive = function (env, client, msg) {
 
     //add client to channel
     c.clients.push(client)
+    env.clientChannel[client.userId] = clientChannel
 
     //notify admins
     for (const pair of c.clients) {
         let tagsClient = env.clientChannelTags[client.userId]
         if (tagsClient) {
             if (tagsClient.admin) {
-                //if (pair.userId !== client.userId)
+                if (pair.userId !== client.userId)
                     env.send(pair, {c: "connected", user: client.userId})
             }
         }
     }
     env.send(client, {c: "connected", channel: clientChannel})
-
-    //write
-    env.clientChannel[client.userId] = clientChannel
-    env.clientChannelTags[client.userId] = tags
 }
 
 let aliases = ["c"]
