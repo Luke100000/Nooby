@@ -29,6 +29,8 @@ let intTo3Bytes = function (l) {
     return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
 }
 
+let msgpack = require("./msgpack.js")
+
 class Wrapper {
     constructor(cfg, callbacks) {
         if (cfg == null && callbacks == null) return
@@ -41,7 +43,7 @@ class Wrapper {
         new (require("./sockets/udp.js"))(this, cfg.portUDP)        //include udp socket
         new (require("./sockets/web.js"))(this, cfg.portWEB)        //include web socket
 
-        if (cfg.checkAlive) {                                         //only check alive when defined
+        if (cfg.checkAlive) {                                       //only check alive when defined
             setInterval(function (self) {
                 let now = new Date();
                 let check = 0
@@ -90,17 +92,19 @@ class Wrapper {
                 //currently parsing incoming message
                 if (client.receiving.awaiting_json) {
                     if (client.bytesReceived >= client.receiving.length) {
-                        let json = client.buffer.slice(0, client.receiving.length).toString()
-                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
-                        client.receiving.awaiting_json = false
+                        let json = client.buffer.slice(0, client.receiving.length)
                         try {
-                            client.receiving.json = JSON.parse(json);
+                            //msgpack
+                            client.receiving.json = msgpack.decode(json)
+                            //json
                             client.receiving.size = client.receiving.json.l
                         } catch (err) {
                             self.destroySocket(client, "JSON_malformed")
                             this.callbacks._log("[JSON] error:", json)
                             return
                         }
+                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
+                        client.receiving.awaiting_json = false
                     } else {
                         //wait
                         break
@@ -233,9 +237,9 @@ class Wrapper {
             case 0:
                 msg.json.l = msg.data.length
                 msg.json.user = user
-                data_json = JSON.stringify(msg.json)
-                buf = Buffer.from(tc + intTo3Bytes(data_json.length) + data_json)
-                return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
+                data_json = msgpack.encode(msg.json)
+                buf = Buffer.from(tc + intTo3Bytes(data_json.length))
+                return Buffer.concat([buf, data_json, msg.data], buf.length + data_json.length + msg.data.length)
             case 1:
                 buf = Buffer.from(tc + intTo3Bytes(msg.data.length) + intTo3Bytes(user))
                 return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
@@ -244,8 +248,9 @@ class Wrapper {
                 return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
             case 3:
                 msg.json.user = user
-                data_json = JSON.stringify(msg.json)
-                return Buffer.from(tc + intTo3Bytes(data_json.length) + data_json)
+                data_json = msgpack.encode(msg.json)
+                buf = Buffer.from(tc + intTo3Bytes(data_json.length))
+                return Buffer.concat([buf, data_json], buf.length + data_json.length)
             case 4:
                 return Buffer.from(tc + intTo3Bytes(msg.length))
         }
