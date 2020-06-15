@@ -2,8 +2,8 @@ let receive = function (env, client, msg) {
     //reset client data
     let tags = env.clientChannelTags[client.userId]
 
-    if (msg.json.tag != null) {
-        tags[msg.json.tag] = msg.json.tagValue;
+    if (msg.header.tag != null) {
+        tags[msg.header.tag] = msg.header.tagValue;
     }
 }
 

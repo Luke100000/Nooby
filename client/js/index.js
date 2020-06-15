@@ -13,9 +13,9 @@ let wrapper = {
 
 let testTypes = function () {
     noobyClient.send({})    //empty data -> client should not send anything
-    noobyClient.send({json: {c: "msg"}, data: "Hello"})    //type 0
+    noobyClient.send({header: {c: "msg"}, data: "Hello"})    //type 0
     noobyClient.send({data: "Hello"})                      //type 2
-    noobyClient.send({json: {c: "msg"}})                   //type 3
+    noobyClient.send({header: {c: "msg"}})                   //type 3
     noobyClient.ping()                                          //type 4
 }
 

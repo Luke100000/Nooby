@@ -12,7 +12,7 @@ let init = function (env) {
 
 let receive = function (env, client, msg) {
     //client identifier
-    client.session = client.ID + "_" + (msg.json.session || env.lastSessionID++).toString()
+    client.session = client.ID + "_" + (msg.header.session || env.lastSessionID++).toString()
 
     //assign user ID or create new
     client.userId = env.userIds[client.session] || env.lastID++
@@ -32,8 +32,8 @@ let receive = function (env, client, msg) {
     env.clientChannelTags[client.userId] = tags
 
     //set new channel name, or random if no name specified
-    if (msg.json.channel) {
-        clientChannel = msg.json.channel.toString()
+    if (msg.header.channel) {
+        clientChannel = msg.header.channel.toString()
     } else {
         clientChannel = env.lastChannelId.toString()
         env.lastChannelId++

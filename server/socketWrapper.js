@@ -1,18 +1,18 @@
 class Msg {
-    constructor(json, data) {
+    constructor(header, data) {
         this.length = 0    //length of header
         this.size = 0      //length of data segment
-        this.json = json   //header
+        this.header = header   //header
         this.data = data   //data segment
     }
 }
 
-let isEmptyJSON = function (json) {
-    if (json == null) {
+let isEmptyJSON = function (header) {
+    if (header == null) {
         return true
     } else {
         try {
-            return Object.keys(json).length === 0
+            return Object.keys(header).length === 0
         } catch (err) {
             console.log(err);
             return true
@@ -90,21 +90,21 @@ class Wrapper {
         while (true) {
             if (client.receiving) {
                 //currently parsing incoming message
-                if (client.receiving.awaiting_json) {
+                if (client.receiving.awaiting_header) {
                     if (client.bytesReceived >= client.receiving.length) {
-                        let json = client.buffer.slice(0, client.receiving.length)
+                        let header = client.buffer.slice(0, client.receiving.length)
                         try {
                             //msgpack
-                            client.receiving.json = msgpack.decode(json)
-                            //json
-                            client.receiving.size = client.receiving.json.l
+                            client.receiving.header = msgpack.decode(header)
+                            //header
+                            client.receiving.size = client.receiving.header.l
                         } catch (err) {
                             self.destroySocket(client, "JSON_malformed")
-                            this.callbacks._log("[JSON] error:", json)
+                            this.callbacks._log("[JSON] error:", header)
                             return
                         }
                         client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
-                        client.receiving.awaiting_json = false
+                        client.receiving.awaiting_header = false
                     } else {
                         //wait
                         break
@@ -120,11 +120,11 @@ class Wrapper {
                         break
                     }
                 } else {
-                    //if there is no json, create json
-                    if (!client.receiving.json) client.receiving.json = {}
+                    //if there is no header, create header
+                    if (!client.receiving.header) client.receiving.header = {}
 
                     //done
-                    client.receiving.json.cmd = client.receiving.json.c || client.receiving.json.cmd || "msg"
+                    client.receiving.header.cmd = client.receiving.header.c || client.receiving.header.cmd || "msg"
                     this.callbacks.receive(client, client.receiving)
                     client.receiving = false
                 }
@@ -142,9 +142,9 @@ class Wrapper {
 
                     switch (type) {
                         case 0:
-                            //json and data
+                            //header and data
                             client.receiving.length = length
-                            client.receiving.awaiting_json = true
+                            client.receiving.awaiting_header = true
                             client.receiving.awaiting_data = true
                             break
                         case 1:
@@ -158,9 +158,9 @@ class Wrapper {
                             client.receiving.awaiting_data = true
                             break
                         case 3:
-                            //json only
+                            //header only
                             client.receiving.length = length
-                            client.receiving.awaiting_json = true
+                            client.receiving.awaiting_header = true
                             break
                         case 4:
                             //ping
@@ -203,12 +203,12 @@ class Wrapper {
     msgToPacket = function (msg) {
         //extract send user
         let user = false
-        if (!isEmptyJSON(msg.json)) {
-            user = msg.json.user
-            delete msg.json.user
+        if (!isEmptyJSON(msg.header)) {
+            user = msg.header.user
+            delete msg.header.user
         }
 
-        let no_JSON = isEmptyJSON(msg.json)
+        let no_JSON = isEmptyJSON(msg.header)
         let no_DATA = isEmptyString(msg.data)
 
         //determine type
@@ -231,15 +231,15 @@ class Wrapper {
         let tc = String.fromCharCode(type);
 
         //pack
-        let data_json
+        let data_header
         let buf
         switch (type) {
             case 0:
-                msg.json.l = msg.data.length
-                msg.json.user = user
-                data_json = msgpack.encode(msg.json)
-                buf = Buffer.from(tc + intTo3Bytes(data_json.length))
-                return Buffer.concat([buf, data_json, msg.data], buf.length + data_json.length + msg.data.length)
+                msg.header.l = msg.data.length
+                msg.header.user = user
+                data_header = msgpack.encode(msg.header)
+                buf = Buffer.from(tc + intTo3Bytes(data_header.length))
+                return Buffer.concat([buf, data_header, msg.data], buf.length + data_header.length + msg.data.length)
             case 1:
                 buf = Buffer.from(tc + intTo3Bytes(msg.data.length) + intTo3Bytes(user))
                 return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
@@ -247,10 +247,10 @@ class Wrapper {
                 buf = Buffer.from(tc + intTo3Bytes(msg.data.length))
                 return Buffer.concat([buf, msg.data], buf.length + msg.data.length)
             case 3:
-                msg.json.user = user
-                data_json = msgpack.encode(msg.json)
-                buf = Buffer.from(tc + intTo3Bytes(data_json.length))
-                return Buffer.concat([buf, data_json], buf.length + data_json.length)
+                msg.header.user = user
+                data_header = msgpack.encode(msg.header)
+                buf = Buffer.from(tc + intTo3Bytes(data_header.length))
+                return Buffer.concat([buf, data_header], buf.length + data_header.length)
             case 4:
                 return Buffer.from(tc + intTo3Bytes(msg.length))
         }
@@ -259,9 +259,9 @@ class Wrapper {
         return false
     }
 
-    send = function (client, json, data) {
+    send = function (client, header, data) {
         let self = this
-        let packet = self.msgToPacket(new Msg(json, data))
+        let packet = self.msgToPacket(new Msg(header, data))
         if (packet) {
             client.send(client, packet)
             return packet.length

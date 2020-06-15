@@ -59,8 +59,8 @@ let environment = {
         stats.add("dataOut", length)
     },
 
-    send: function (client, json, data) {
-        length = socketWrapper.send(client, json, data)
+    send: function (client, header, data) {
+        length = socketWrapper.send(client, header, data)
 
         stats.add("msgOut", 1)
         stats.add("dataOut", length)
@@ -97,12 +97,12 @@ let callbacks = {
         stats.add("dataIn", data)
         stats.add("msgIn", 1)
 
-        if (nm[msg.json.cmd]) {
-            if (nm[msg.json.cmd].receive) {
-                nm[msg.json.cmd].receive(environment, client, msg)
+        if (nm[msg.header.cmd]) {
+            if (nm[msg.header.cmd].receive) {
+                nm[msg.header.cmd].receive(environment, client, msg)
             }
         } else {
-            _log("Unknown message type " + msg.json.cmd)
+            _log("Unknown message type " + msg.header.cmd)
         }
     },
 
