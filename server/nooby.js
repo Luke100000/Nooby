@@ -93,7 +93,7 @@ require("fs").readdirSync(nmpath).forEach(function (file) {
 let callbacks = {
     receive: function (client, msg) {
         _log(msg)
-        let data = 4 + msg.length || 0 + msg.size || 0
+        let data = 4 + (msg.length || 0) + (msg.size || 0)
         stats.add("dataIn", data)
         stats.add("msgIn", 1)
 
