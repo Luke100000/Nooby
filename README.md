@@ -1,7 +1,7 @@
 # Nooby
 Node.js multiplayer message server suitable for client to client applications
 
-## DEVELOPMENT IN PORGRESS
+## DEVELOPMENT IN PROGRESS
 While fully functional it still lacks most features and things might change.
 
 [![Project license](https://img.shields.io/github/license/Luke100000/Nooby?style=flat-square)](https://github.com/Luke100000/Nooby/blob/master/LICENSE)
