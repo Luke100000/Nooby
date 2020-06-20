@@ -18,7 +18,7 @@ class SocketWEB {
                 wrapper.receive(socket, message.binaryData)
             });
             socket.on('close', function (reasonCode, description) {
-                console.log('[WEB] Client has disconnected.');
+                wrapper.callbacks._log('[WEB] Client has disconnected.');
                 wrapper.destroySocket(socket)
             });
 

@@ -2,8 +2,9 @@ let noobyClient = new nooby;
 
 let wrapper = {
     onmessage: function (msg) {
-        //console.log("[nooby] data received", msg)
-        document.getElementById("console").innerHTML = msg.data.data
+        let cmd = msg.header.c || msg.header.cmd
+        if(msg.data)
+            document.getElementById("console").innerHTML = cmd + ": "+msg.data.data
     },
     log: function(){
         console.log(arguments[0])

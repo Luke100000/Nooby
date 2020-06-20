@@ -1,5 +1,6 @@
 let receive = function (env, client, msg) {
     let send = false;
+    let clients = socketWrapper.clients
     //check if receiver exists
     if (msg.json.toUser != null) {
         //create return msg
@@ -12,7 +13,7 @@ let receive = function (env, client, msg) {
         let msgReturn = new env.Msg(header, msg.data);
         let packet = env.msgToPacket(msgReturn)
 
-        for (const clientC of env.channels[clientChannel].clients) {
+        for (const clientC of clients) {
             if(clientC.userId == msg.json.toUser){
                 env.sendPacket(clientC, packet)
                 send = true;
