@@ -96,7 +96,7 @@ class Wrapper {
                         try {
                             //msgpack
                             client.receiving.json = msgpack.decode(json)
-                            //json
+                            //data
                             client.receiving.size = client.receiving.json.l
                         } catch (err) {
                             self.destroySocket(client, "JSON_malformed")
@@ -229,7 +229,7 @@ class Wrapper {
 
         //type char
         let tc = String.fromCharCode(type);
-
+        
         //pack
         let data_json
         let buf

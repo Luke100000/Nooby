@@ -1,9 +1,21 @@
 let receive = function (env, client, msg) {
-    //reset client data
-    let tags = env.clientChannelTags[client.userId]
+    let userId;
 
-    if (msg.json.tag != null) {
-        tags[msg.json.tag] = msg.json.tagValue;
+    if (msg.header.userId) {
+        if (env.clientChannelTags[client.userId].admin) {
+            userId = msg.header.userId;
+        } else {
+            env.send(client, {c: "permission_denied", msg: msg.header})
+            return
+        }
+    } else {
+        userId = client.userId;
+    }
+
+    let tags = env.clientChannelTags[userId]
+    if (msg.header.tag != null) {
+        tags[msg.header.tag] = msg.header.tagValue;
+        env.sendAdmins(env.clientChannel[userId], {c: "success", msg: msg.header})
     }
 }
 

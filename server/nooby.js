@@ -65,6 +65,15 @@ let environment = {
         stats.add("msgOut", 1)
         stats.add("dataOut", length)
     },
+
+    sendAdmins: function (channel, header, data) {
+        for (const client of channel.clients) {
+            let tagsClient = environment.clientChannelTags[client.userId]
+            if (tagsClient && tagsClient.admin) {
+                environment.send(client, json, data)
+            }
+        }
+    }
 }
 
 //modules
@@ -94,8 +103,8 @@ let callbacks = {
     receive: function (client, msg) {
         _log(msg)
         let data = 4 + msg.length || 0 + msg.size || 0
-        stats.add("dataIn", data)
         stats.add("msgIn", 1)
+        stats.add("dataIn", data)
 
         if (nm[msg.json.cmd]) {
             if (nm[msg.json.cmd].receive) {
