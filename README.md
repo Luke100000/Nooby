@@ -56,8 +56,8 @@ module.exports = {
 }
 ```
 - To get the module working, you have to put it into the nooby_modules folder. The name could be "myModule.js"
-- If you want to send a message to your module, you have to put into the `JSON:{"cmd":"myModule"}`
-- In aliases you can define aliases, so that you can have `JSON:{"cmd":"mm"}`, but check to have no same aliases for 2 different modules
+- If you want to send a message to your module, you have to put into the `HEADER:{"cmd":"myModule"}`
+- In aliases you can define aliases, so that you can have `HEADER:{"cmd":"mm"}`, but check to have no same aliases for 2 different modules
 - init
   - in `env` you can define tables for your spezific module data (env won't be only for your module. So if you dont want to check if no other module hast defined that name, you can first define a table `env.myModule = {}` and then you can define your variable like `env.myModule.var` or/and table `env.myModule.table = {}`). Of course you can also use: `env.myvar` if you are sure, no other module will !init! that too.
   - will be called at noobyStart
@@ -67,24 +67,25 @@ module.exports = {
   - `msg` is the input message.
     ```js
     Msg{
-      length: 0,
-      size: 10,
-      json: { cmd: 'msg' },
-      data: 'HelloWorld',
-      awaiting_data: false
+      length: 0,    //internal use
+      size: 10,     //internal use
+      header: { cmd: 'mm' },
+      data: Buffer,
+      awaiting_data: false  //internal use
     }
     ```
 
 
 ## usage Client
-### synonym JSON:{cmd}
+### synonym HEADER:{cmd}
 - c = connect
 - m = msg
+- t = tag
 
 ### commands
-- connect to channel: `JSON:{"cmd":"connect"}` Host get random ChannelID
-- connect to channel with name: `JSON:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
-- send msg: `JSON:{"cmd":"msg"}DATA` Send message to everyone in the channel, excude you; you will get your data back, if you are not in a channel
+- connect to channel: `HEADER:{"cmd":"connect"}` Host get random ChannelID
+- connect to channel with name: `HEADER:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
+- send msg: `HEADER:{"cmd":"msg"}DATA` Send message to everyone in the channel, excude you; you will get your data back, if you are not in a channel
 
 ### lua
 ```lua
@@ -103,20 +104,20 @@ let wrapper = {                 //with the wrapper you say noobyClient, what to 
 }
 noobyClient.init(wrapper, "localhost", "25002");  //initialise the client. The Port must be WebSocket
 
-noobyClient.send(json, data)    //send `json`, and `data`
+noobyClient.send(header, data)    //send `header`, and `data`
 ```
 
 ## Message format packed
 ### format of incomming message
-`CLLL{json}DATA` (one possibility)
+`CLLL{header}DATA` (one possibility)
 
 C is the packet format
-- 0    `CLLL{json}DATA`
+- 0    `CLLL{header}DATA`
 - 1    `CLLLUUUDATA (U is the user ID)`
 - 2    `CLLLDATA`
-- 3    `CLLL{json}`
+- 3    `CLLL{header}`
 - 4    `CIII` (Where I is an optional indicator, used to ping)
-And L the length of the next packet, either JSON or DATA (user ID has fixed length and is exluded)
+And L the length of the next packet, either HEADER or DATA (user ID has fixed length and is exluded)
     
 
 ### user ID

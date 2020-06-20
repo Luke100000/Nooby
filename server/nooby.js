@@ -59,8 +59,8 @@ let environment = {
         stats.add("dataOut", length)
     },
 
-    send: function (client, json, data) {
-        length = socketWrapper.send(client, json, data)
+    send: function (client, header, data) {
+        length = socketWrapper.send(client, header, data)
 
         stats.add("msgOut", 1)
         stats.add("dataOut", length)
@@ -70,7 +70,7 @@ let environment = {
         for (const client of channel.clients) {
             let tagsClient = environment.clientChannelTags[client.userId]
             if (tagsClient && tagsClient.admin) {
-                environment.send(client, json, data)
+                environment.send(client, header, data)
             }
         }
     }
@@ -102,16 +102,16 @@ require("fs").readdirSync(nmpath).forEach(function (file) {
 let callbacks = {
     receive: function (client, msg) {
         _log(msg)
-        let data = 4 + msg.length || 0 + msg.size || 0
+        let data = 4 + (msg.length || 0) + (msg.size || 0)
         stats.add("msgIn", 1)
         stats.add("dataIn", data)
 
-        if (nm[msg.json.cmd]) {
-            if (nm[msg.json.cmd].receive) {
-                nm[msg.json.cmd].receive(environment, client, msg)
+        if (nm[msg.header.cmd]) {
+            if (nm[msg.header.cmd].receive) {
+                nm[msg.header.cmd].receive(environment, client, msg)
             }
         } else {
-            _log("Unknown message type " + msg.json.cmd)
+            _log("Unknown message type " + msg.header.cmd)
         }
     },
 

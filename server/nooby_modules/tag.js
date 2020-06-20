@@ -15,7 +15,7 @@ let receive = function (env, client, msg) {
     let tags = env.clientChannelTags[userId]
     if (msg.header.tag != null) {
         tags[msg.header.tag] = msg.header.tagValue;
-        env.sendAdmins(env.clientChannel[userId], {c: "success", msg: msg.header})
+        env.sendAdmins(env.channels[env.clientChannel[userId]], {c: "success", msg: msg.header})
     }
 }
 

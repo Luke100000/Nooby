@@ -79,9 +79,9 @@ class nooby{
                 let length = viewBuf.getUint8(1) * 256 * 256 + viewBuf.getUint8(2) * 256 + viewBuf.getUint8(3)
                 switch (msg.type) {
                     case 0: {
-                        let json = buf.slice(4, 4 + length)
-                        msg.json = msgpack.decode(Buffer.from(json))
-                        msg.data = buf.slice(4 + length, 4 + length + msg.json.l)
+                        let header = buf.slice(4, 4 + length)
+                        msg.header = msgpack.decode(Buffer.from(header))
+                        msg.data = buf.slice(4 + length, 4 + length + msg.header.l)
                     }
                         break;
                     case 1: {
@@ -94,8 +94,8 @@ class nooby{
                     }
                         break;
                     case 3: {
-                        let json = buf.slice(4, 4 + length)
-                        msg.json = msgpack.decode(Buffer.from(json))
+                        let header = buf.slice(4, 4 + length)
+                        msg.header = msgpack.decode(Buffer.from(header))
                     }
                         break;
                     case 4:
@@ -112,7 +112,7 @@ class nooby{
                     if(viewbuf[0] == 1){
                         msg.data = decompress(msg.data.slice(1), true)
                         msg.data = msgpack.decode(msg.data)
-                        msg.json.l = msg.data.length
+                        msg.header.l = msg.data.length
                     }else if(viewbuf[0] == 0){
                         msg.data = msgpack.decode(Buffer.from(msg.data.slice(1)))
                     }
@@ -158,9 +158,9 @@ class nooby{
     connect(channel) {
         self = this
         if (channel != null)
-            self.send({json: {"cmd": "c", "channel": channel}})
+            self.send({header: {"cmd": "c", "channel": channel}})
         else
-            self.send({json: {"cmd": "c", "channel": ""}})
+            self.send({header: {"cmd": "c", "channel": ""}})
     }
     
     ping() {
@@ -185,12 +185,12 @@ class nooby{
 
     //pack a msg object into a string
     msgToPacket(msg) {
-        let isEmptyJSON = function (json) {
-            if (json == null) {
+        let isEmptyJSON = function (header) {
+            if (header == null) {
                 return true
             } else {
                 try {
-                    return Object.keys(json).length === 0
+                    return Object.keys(header).length === 0
                 } catch (err) {
                     wrapper.log(err);
                     return true
@@ -207,7 +207,7 @@ class nooby{
             return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
         }
 
-        let no_JSON = isEmptyJSON(msg.json)
+        let no_JSON = isEmptyJSON(msg.header)
         let no_DATA = isEmptyString(msg.data)
 
         //determine type
@@ -240,20 +240,20 @@ class nooby{
         }
 
         //pack
-        let data_json
+        let data_header
         switch (type) {
             case 0:
-                msg.json.l = msg.data.length
-                data_json = this.binary2text(msgpack.encode(msg.json))
-                return tc + intTo3Bytes(data_json.length) + data_json + msg.data
+                msg.header.l = msg.data.length
+                data_header = this.binary2text(msgpack.encode(msg.header))
+                return tc + intTo3Bytes(data_header.length) + data_header + msg.data
             case 1:
                 //user side only
                 return false
             case 2:
                 return tc + intTo3Bytes(msg.data.length) + msg.data
             case 3:
-                data_json = this.binary2text(msgpack.encode(msg.json))
-                return tc + intTo3Bytes(data_json.length) + data_json
+                data_header = this.binary2text(msgpack.encode(msg.header))
+                return tc + intTo3Bytes(data_header.length) + data_header
             case 4:
                 return tc + intTo3Bytes(msg.length)
         }
