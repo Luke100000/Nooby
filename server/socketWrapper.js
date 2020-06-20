@@ -96,7 +96,6 @@ class Wrapper {
                         try {
                             //msgpack
                             client.receiving.header = msgpack.decode(header)
-                            //header
                             client.receiving.size = client.receiving.header.l
                         } catch (err) {
                             self.destroySocket(client, "JSON_malformed")

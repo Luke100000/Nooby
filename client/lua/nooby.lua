@@ -25,7 +25,7 @@ local meta = { }
 
 local session = 0
 
-function nooby(server, port, channel)
+function nooby(server, port, channel, packer, compression, compressionLevel)
 	assert(server, "address required")
 	assert(port, "port required")
 	
@@ -40,6 +40,9 @@ function nooby(server, port, channel)
 	self.settings = {
 		channel = channel,
 		session = require("socket").dns.gethostname() .. "_" .. session,
+		packer = packer or "packTable",
+		compression = compression or "lz4",
+		compressionLevel = compressionLevel or -1,
 	}
 	
 	session = session + 1
@@ -70,7 +73,7 @@ function meta:receive()
 	local msg = self.channel_receive:pop()
 	
 	if type(msg) == "string" then
-		error(msg)
+		return false, msg
 	else
 		return msg
 	end

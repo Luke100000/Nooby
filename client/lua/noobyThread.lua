@@ -4,12 +4,14 @@
 
 local dir, channel_send, channel_receive, server, port, settings = unpack({...})
 
+local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or 0
+
 require("love.thread")
 require("love.data")
 require("love.timer")
 
-require(dir .. "/json")
-require(dir .. "/saveTableBinary")
+local packer_header = require(dir .. "/packer/MessagePack")
+local packer = require(dir .. "/packer/" .. settings.packer)
 
 local socket = require("socket")
 local sock
@@ -18,32 +20,41 @@ local sock
 local reconnectSleep = 0.5
 local reconnectAttempts = 20
 
+local char = string.char
+local floor = math.floor
+
+--automatically adjusted threshold
+local compressionThreshold = 64
+
 --packets waiting to be sent
 local jobs = { }
 
 function packInt(i)
-	return string.char(math.floor(i / 65536)) .. string.char(math.floor(i / 256) % 256) .. string.char(i % 256)
+	return char(floor(i / 65536), floor(i / 256) % 256, i % 256)
 end
 
 function unpackInt(str)
-	return string.byte(str:sub(1, 1)) * 256 * 256 + string.byte(str:sub(2, 2)) * 256 + string.byte(str:sub(3, 3))
+	return str:byte(1) * 65536 + str:byte(2) * 256 + str:byte(3)
 end
 
 --pack a message
 function packMsg(header, data)
-	local data_data
+	--pack
+	local data_data = data and packer.pack(data) or ""
 	
-	if true then
-		data_data = data and data.data or "hi"
-	else
-		data_data = data and table.saveBinary(data) or ""
+	--compress
+	local rawLength = #data_data
+	if rawLength > compressionThreshold and compressionID > 0 then
+		data_data = char(compressionID) .. love.data.compress("string", settings.compression, data_data, settings.compressionLevel)
 		
-		--compress
-		if #data_data > 128 then
-			data_data = string.char(1) .. love.data.compress("string", "lz4", data_data, 1)
+		--auto adjust threshold
+		if #data_data > rawLength then
+			compressionThreshold = compressionThreshold + 1
 		else
-			data_data = string.char(0) .. data_data
+			compressionThreshold = compressionThreshold - 0.1
 		end
+	else
+		data_data = char(0) .. data_data
 	end
 	
 	--length of data segment
@@ -54,14 +65,14 @@ function packMsg(header, data)
 	header.cmd = nil
 	
 	--header segment
-	local json_data = json.encode(header)
+	local header_data = packer_header.pack(header)
 	
 	--detemine type
 	local typ = 0
-	local length = #json_data
+	local length = #header_data
 	
 	--pack
-	local packet = string.char(typ) .. packInt(length) .. json_data .. data_data
+	local packet = char(typ) .. packInt(length) .. header_data .. data_data
 	
 	--push to jobs
 	jobs[#jobs+1] = {packet}
@@ -161,6 +172,7 @@ while true do
 	--receive msgs
 	local result, message, partial = sock:receive(1024 * 64)
 	if result then
+		error()
 		buffer = buffer .. result
 		worked = true
 	else
@@ -181,26 +193,22 @@ while true do
 			if receiving[1] then
 				--header
 				if #buffer >= receiving.length then
-					receiving.json = json.decode(buffer:sub(1, receiving.length))
+					receiving.header = packer_header.unpack(buffer:sub(1, receiving.length))
 					
 					buffer = buffer:sub(receiving.length+1)
 					
 					receiving[1] = false
-					receiving.length = receiving.json.l
+					receiving.length = receiving.header.l
 				end
 			elseif receiving[2] then
 				--data
 				if #buffer >= receiving.length then
 					local dat = buffer:sub(1, receiving.length)
 					
-					if true then
-						dat = {data = dat}
+					if dat:sub(1, 1) == char(0) then
+						dat = packer.unpack(dat:sub(2))
 					else
-						if dat:sub(1, 1) == string.char(0) then
-							dat = table.loadBinary(dat:sub(2))
-						else
-							dat = table.loadBinary(love.data.decompress("string", "lz4", dat:sub(2)))
-						end
+						dat = packer.unpack(love.data.decompress("string", "lz4", dat:sub(2)))
 					end
 					
 					buffer = buffer:sub(receiving.length+1)
@@ -210,12 +218,12 @@ while true do
 				end
 			else
 				--done
-				channel_receive:push({json = receiving.json, data = receiving.data})
+				channel_receive:push({header = receiving.header, data = receiving.data})
 				receiving = false
 			end
 		else
 			if #buffer >= 4 then
-				local typ = string.byte(buffer:sub(1, 1))
+				local typ = buffer:byte(1)
 				
 				if typ == 0 then
 					receiving = {true, true}
@@ -236,7 +244,7 @@ while true do
 				if receiving then
 					receiving.length = unpackInt(buffer:sub(2, 4))
 					
-					receiving.json = { }
+					receiving.header = { }
 					receiving.data = { }
 				end
 				

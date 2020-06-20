@@ -61,15 +61,10 @@ let receive = function (env, client, msg) {
     c.clients.push(client)
     env.clientChannel[client.userId] = clientChannel
 
-    //notify admins
-    for (const pair of c.clients) {
-        let tagsClient = env.clientChannelTags[client.userId]
-        if (tagsClient) {
-            if (tagsClient.admin) {
-                if (pair.userId !== client.userId)
-                    env.send(pair, {c: "connected", user: client.userId})
-            }
-        }
+    //notify other user
+    for (const clientC of c.clients) {
+        if (clientC.userId !== client.userId)
+            env.send(clientC, {c: "connected", user: client.userId})
     }
     env.send(client, {c: "connected", channel: clientChannel})
 }
