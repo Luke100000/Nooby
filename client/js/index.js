@@ -38,5 +38,5 @@ let test = function () {
 }
 
 window.onload = function () {
-    noobyClient.init(wrapper, "localhost", "25002");
+    noobyClient.init(wrapper, "katzmair.eu", "25002");
 }
