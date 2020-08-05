@@ -51,6 +51,9 @@ let decompress = function(cdata, asbuffer){
 }
 
 class nooby{
+    status = {
+        channel: ""
+    }
     init(wrapper, ip, port, compress) {
         self = this
         this.compress = compress || true
@@ -116,6 +119,11 @@ class nooby{
                     }else if(viewbuf[0] == 0){
                         msg.data = msgpack.decode(Buffer.from(msg.data.slice(1)))
                     }
+                }
+                //status
+                if(msg.header && msg.header.c == "connected"){
+                    self.status.channel = msg.header.channel
+                    console.log(self.status)
                 }
                 wrapper.onmessage(msg)
             })();
@@ -247,7 +255,7 @@ class nooby{
                 data_header = this.binary2text(msgpack.encode(msg.header))
                 return tc + intTo3Bytes(data_header.length) + data_header + msg.data
             case 1:
-                //user side only
+                //server to user side only
                 return false
             case 2:
                 return tc + intTo3Bytes(msg.data.length) + msg.data

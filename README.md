@@ -1,7 +1,7 @@
 # Nooby
 Node.js multiplayer message server suitable for client to client applications
 
-## DEVELOPMENT IN PORGRESS
+## DEVELOPMENT IN PROGRESS
 While fully functional it still lacks most features and things might change.
 
 [![Project license](https://img.shields.io/github/license/Luke100000/Nooby?style=flat-square)](https://github.com/Luke100000/Nooby/blob/master/LICENSE)
@@ -59,7 +59,7 @@ module.exports = {
 - If you want to send a message to your module, you have to put into the `HEADER:{"cmd":"myModule"}`
 - In aliases you can define aliases, so that you can have `HEADER:{"cmd":"mm"}`, but check to have no same aliases for 2 different modules
 - init
-  - in `env` you can define tables for your spezific module data (env won't be only for your module. So if you dont want to check if no other module hast defined that name, you can first define a table `env.myModule = {}` and then you can define your variable like `env.myModule.var` or/and table `env.myModule.table = {}`). Of course you can also use: `env.myvar` if you are sure, no other module will !init! that too.
+  - in `env` you can define tables for your specific module data (env won't be only for your module. So if you dont want to check if no other module hast defined that name, you can first define a table `env.myModule = {}` and then you can define your variable like `env.myModule.var` or/and table `env.myModule.table = {}`). Of course you can also use: `env.myvar` if you are sure, no other module will !init! that too.
   - will be called at noobyStart
 - receive
   - in `env` you will find all the environment variables from all modules: like `env.channels` (have a look at [server/nooby_modules/connect.js](server/nooby_modules/connect.js))
@@ -85,7 +85,7 @@ module.exports = {
 ### commands
 - connect to channel: `HEADER:{"cmd":"connect"}` Host get random ChannelID
 - connect to channel with name: `HEADER:{"cmd":"connect", "channel":"channelname"}` Host connect to channel with name channelname
-- send msg: `HEADER:{"cmd":"msg"}DATA` Send message to everyone in the channel, excude you; you will get your data back, if you are not in a channel
+- send msg: `HEADER:{"cmd":"msg"}DATA` Send message to everyone in the channel, excluding you; you will get your data back, if you are not in a channel
 
 ### lua
 ```lua
@@ -107,8 +107,8 @@ noobyClient.init(wrapper, "localhost", "25002");  //initialise the client. The P
 noobyClient.send(header, data)    //send `header`, and `data`
 ```
 
-## Message format packed
-### format of incomming message
+## Message format packet
+### format of incoming message
 `CLLL{header}DATA` (one possibility)
 
 C is the packet format
