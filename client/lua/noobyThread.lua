@@ -172,7 +172,6 @@ while true do
 	--receive msgs
 	local result, message, partial = sock:receive(1024 * 64)
 	if result then
-		error()
 		buffer = buffer .. result
 		worked = true
 	else
