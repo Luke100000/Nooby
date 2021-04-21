@@ -120,7 +120,9 @@ class Wrapper {
                     }
                 } else {
                     //if there is no header, create header
-                    if (!client.receiving.header) client.receiving.header = {}
+                    if (typeof client.receiving.header === 'object' && client.receiving.header !== null){}else{
+						client.receiving.header = {}
+					}
 
                     //done
                     client.receiving.header.cmd = client.receiving.header.c || client.receiving.header.cmd || "msg"
