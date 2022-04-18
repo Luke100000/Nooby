@@ -83,7 +83,7 @@ class nooby{
                 let header = buf.slice(3, 3 + length)
                 msg.header = msgpack.decode(Buffer.from(header))
 
-                if (msg.header.l && msg.header.l > 0) {
+                if (msg.header && msg.header.l && msg.header.l > 0) {
                     msg.data = buf.slice(3 + length, 3 + length + msg.header.l)
 
                     //uncompress
@@ -99,8 +99,15 @@ class nooby{
 
                 //status
                 if (msg.header && msg.header.c === "connected") {
-                    self.status.channel = msg.header.channel
-                    console.log(self.status)
+                    //connected to channel
+                    if(msg.header.channel){
+                        self.status.channel = msg.header.channel
+                        console.log(self.status)
+                    }
+                    //new user connected in channel
+                    if(msg.header.u){
+                        console.log("New User with ID: "+msg.header.u)
+                    }
                 }
                 wrapper.onmessage(msg)
             })();
@@ -190,6 +197,7 @@ class nooby{
             } else
                 msg.data = String.fromCharCode(0) + msg.data
 
+            msg.header = {}
             msg.header.l = msg.data.length
 
             let data_header = this.binary2text(msgpack.encode(msg.header))

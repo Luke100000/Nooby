@@ -2,7 +2,7 @@ let noobyClient = new nooby;
 
 let wrapper = {
     onmessage: function (msg) {
-        let cmd = msg.header.c || msg.header.cmd
+        let cmd = "m" || msg.header.c || msg.header.cmd
         if(msg.data)
             document.getElementById("console").innerHTML = cmd + ": "+msg.data.data
     },
@@ -14,10 +14,10 @@ let wrapper = {
 
 let testTypes = function () {
     noobyClient.send({})    //empty data -> client should not send anything
-    noobyClient.send({header: {c: "msg"}, data: "Hello"})    //type 0
-    noobyClient.send({data: "Hello"})                      //type 2
-    noobyClient.send({header: {c: "msg"}})                   //type 3
-    noobyClient.ping()                                          //type 4
+    noobyClient.send({header: {c: "msg"}, data: "Hello"})       //type 0
+    noobyClient.send({data: "Hello"})                           //type 2
+    noobyClient.send({header: {c: "msg"}})                      //type 3
+    //noobyClient.ping()                                          //type 4
 }
 
 let testChannel = function () {
@@ -38,5 +38,5 @@ let test = function () {
 }
 
 window.onload = function () {
-    noobyClient.init(wrapper, "katzmair.eu", "25002");
+    noobyClient.init(wrapper, "localhost", "25002");
 }
