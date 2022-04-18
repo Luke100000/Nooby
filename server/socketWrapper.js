@@ -68,7 +68,14 @@ class Wrapper {
     }
 
     receive = function (client, data) {
-        let self = this
+        //shredder package
+        let self = this;
+        if (data.length > this.cfg.bufferSize) {
+            for (let i = 0; i < Math.ceil(data.length / this.cfg.bufferSize); i++) {
+                self.receive(client, data.subarray(i * this.cfg.bufferSize, (i+1) * this.cfg.bufferSize))
+            }
+            return;
+        }
 
         client.lastMsg = new Date()
 
@@ -76,7 +83,7 @@ class Wrapper {
         if (client.bytesReceived + data.length > client.buffer.length) {
             let oldBuffer = client.buffer
             client.buffer = Buffer.allocUnsafe(client.bytesReceived + data.length);
-            oldBuffer.copy(client.buffer, 0, client.bytesReceived)
+            oldBuffer.copy(client.buffer, 0, 0, client.bytesReceived)
             this.callbacks._log("Increased buffer size for client " + client.userId + " to " + (client.bytesReceived + data.length) + " bytes")
         }
 

@@ -31,7 +31,7 @@ cfg = {
     portTCP: 25000,
     portUDP: 25001,
     portWEB: 25002,
-    bufferSize: 1024 * 64,      // buffer allocated per each socket client
+    bufferSize: 1024 * 128,     // buffer allocated per each socket client
 
     checkAlive: 10 * 1000,      // check if every client is alive every 10 seconds
 }
