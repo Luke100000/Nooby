@@ -41,7 +41,7 @@ let compress = function(data){
     return String.fromCharCode.apply(null, output)
 }
 let decompress = function(cdata, asbuffer){
-    var compressed = new Buffer(cdata)
+    const compressed = new Buffer(cdata);
     let uncompressed = new Buffer(24 + 255*(compressed.byteLength-10))       // Initialize the uncompressed buffer to its maximum length based on the compressed data
     let uncompressedSize = LZ4.decodeBlock(compressed, uncompressed)        // block uncompression (no archive format)
     uncompressed = uncompressed.slice(0, uncompressedSize)                  // remove unnecessary bytes
@@ -78,50 +78,27 @@ class nooby{
             (async () => {
                 let buf = await self.readBlobAsync(e.data)
                 let viewBuf = new DataView(buf);
-                msg.type = viewBuf.getUint8(0);
-                let length = viewBuf.getUint8(1) * 256 * 256 + viewBuf.getUint8(2) * 256 + viewBuf.getUint8(3)
-                switch (msg.type) {
-                    case 0: {
-                        let header = buf.slice(4, 4 + length)
-                        msg.header = msgpack.decode(Buffer.from(header))
-                        msg.data = buf.slice(4 + length, 4 + length + msg.header.l)
-                    }
-                        break;
-                    case 1: {
-                        msg.user = viewBuf.getUint8(4) * 256 * 256 + viewBuf.getUint8(5) * 256 + viewBuf.getUint8(6)
-                        msg.data = buf.slice(7, 7 + length)
-                    }
-                        break;
-                    case 2: {
-                        msg.data = buf.slice(4, 4 + length)
-                    }
-                        break;
-                    case 3: {
-                        let header = buf.slice(4, 4 + length)
-                        msg.header = msgpack.decode(Buffer.from(header))
-                    }
-                        break;
-                    case 4:
-                        msg.i = length
-                        if (msg.i === 0) {
-                            self.ping();
-                            return
-                        }
-                        break;
-                }
-                //uncompress
-                if(msg.data){
+                let length = viewBuf.getUint8(0) * 256 * 256 + viewBuf.getUint8(1) * 256 + viewBuf.getUint8(2)
+
+                let header = buf.slice(3, 3 + length)
+                msg.header = msgpack.decode(Buffer.from(header))
+
+                if (msg.header.l && msg.header.l > 0) {
+                    msg.data = buf.slice(3 + length, 3 + length + msg.header.l)
+
+                    //uncompress
                     let viewbuf = new Uint8Array(msg.data);
-                    if(viewbuf[0] == 1){
+                    if (viewbuf[0] === 1) {
                         msg.data = decompress(msg.data.slice(1), true)
                         msg.data = msgpack.decode(msg.data)
                         msg.header.l = msg.data.length
-                    }else if(viewbuf[0] == 0){
+                    } else if (viewbuf[0] === 0) {
                         msg.data = msgpack.decode(Buffer.from(msg.data.slice(1)))
                     }
                 }
+
                 //status
-                if(msg.header && msg.header.c == "connected"){
+                if (msg.header && msg.header.c === "connected") {
                     self.status.channel = msg.header.channel
                     console.log(self.status)
                 }
@@ -133,11 +110,11 @@ class nooby{
     readBlobAsync(blob) {
         return new Promise((resolve, reject) => {
             let reader = new FileReader();
-        
+
             reader.onload = () => {
             resolve(reader.result);
             };
-        
+
             reader.onerror = reject;
             reader.readAsArrayBuffer(blob);
         })
@@ -166,14 +143,9 @@ class nooby{
     connect(channel) {
         self = this
         if (channel != null)
-            self.send({header: {"cmd": "c", "channel": channel}})
+            self.send({header: {"c": "c", "channel": channel}})
         else
-            self.send({header: {"cmd": "c", "channel": ""}})
-    }
-    
-    ping() {
-        self = this
-        self.send({length: 0})
+            self.send({header: {"c": "c", "channel": ""}})
     }
 
     //TOOLS
@@ -193,19 +165,6 @@ class nooby{
 
     //pack a msg object into a string
     msgToPacket(msg) {
-        let isEmptyJSON = function (header) {
-            if (header == null) {
-                return true
-            } else {
-                try {
-                    return Object.keys(header).length === 0
-                } catch (err) {
-                    wrapper.log(err);
-                    return true
-                }
-            }
-        }
-
         let isEmptyString = function (str) {
             return str == null || str.length === 0;
         }
@@ -215,58 +174,26 @@ class nooby{
             return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
         }
 
-        let no_JSON = isEmptyJSON(msg.header)
         let no_DATA = isEmptyString(msg.data)
 
-        //determine type
-        let type = -1
-        if (!no_JSON && !no_DATA) {
-            type = 0
-        } else if (no_JSON && !no_DATA) {
-            type = 2
-        } else if (!no_JSON && no_DATA) {
-            type = 3
-        } else if (no_JSON && no_DATA) {
-            type = 4 //ping
+        if (no_DATA) {
+            let data_header = this.binary2text(msgpack.encode(msg.header))
+            return intTo3Bytes(data_header.length) + data_header
         } else {
-            return false;
-        }
-
-        //type char
-        let tc = String.fromCharCode(type);
-
-        if(!no_DATA){
-            if(typeof msg.data == "string")
+            if (typeof msg.data == "string")
                 msg.data = {data:msg.data}
-            
+
             msg.data = this.binary2text(msgpack.encode(msg.data))
 
-            if(this.compress && msg.data.length >= 128){
+            if (this.compress && msg.data.length >= 128) {
                 msg.data = String.fromCharCode(1) + compress(msg.data)
-            }else
+            } else
                 msg.data = String.fromCharCode(0) + msg.data
-        }
 
-        //pack
-        let data_header
-        switch (type) {
-            case 0:
-                msg.header.l = msg.data.length
-                data_header = this.binary2text(msgpack.encode(msg.header))
-                return tc + intTo3Bytes(data_header.length) + data_header + msg.data
-            case 1:
-                //server to user side only
-                return false
-            case 2:
-                return tc + intTo3Bytes(msg.data.length) + msg.data
-            case 3:
-                data_header = this.binary2text(msgpack.encode(msg.header))
-                return tc + intTo3Bytes(data_header.length) + data_header
-            case 4:
-                return tc + intTo3Bytes(msg.length)
-        }
+            msg.header.l = msg.data.length
 
-        //not implemented type
-        return false
+            let data_header = this.binary2text(msgpack.encode(msg.header))
+            return intTo3Bytes(data_header.length) + data_header + msg.data
+        }
     }
 }

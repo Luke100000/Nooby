@@ -1,0 +1,5 @@
+ping module
+checkAlive does not follow ping format
+channel settings
+getChannels module
+better buffer handling

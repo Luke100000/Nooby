@@ -1,27 +1,32 @@
 let receive = function (env, client, msg) {
     let send = false;
-    let clients = socketWrapper.clients
+
     //check if receiver exists
-    if (msg.json.toUser != null) {
+    if (msg.header.user != null) {
         //create return msg
         let header = {
-            cmd: "dm",
-            user: client.userId,
+            c: "dm",
+            u: client.userId,
             data: msg.header.data
         }
 
         let msgReturn = new env.Msg(header, msg.data);
         let packet = env.msgToPacket(msgReturn)
 
-        for (const clientC of clients) {
-            if(clientC.userId == msg.json.toUser){
-                env.sendPacket(clientC, packet)
+        for (const target of env.socketWrapper.clients) {
+            if (target.userId === msg.header.user) {
+                env.sendPacket(target, packet)
                 send = true;
             }
         }
     }
-    if(!send){
-        env.send(client, {c: "dm"}, {error:"user not found"})
+
+    if (!send) {
+        env.send(client, {
+            c: "error",
+            reason: "user not found",
+            header: msg.header
+        })
     }
 }
 

@@ -45,9 +45,9 @@ let receive = function (env, client, msg) {
     //create new channel if not existing
     if (env.channels[clientChannel] == null) {
         env.channels[clientChannel] = {
-            name: msg.channel || msg.name || clientChannel, //public name, in case of public channel its id
+            //todo unused
+            name: msg.name || clientChannel,
             description: msg.channel == null && msg.description || "public",
-            //password, public, slots, ...
             clients: [],
         }
 
@@ -64,7 +64,7 @@ let receive = function (env, client, msg) {
     //notify other user
     for (const clientC of c.clients) {
         if (clientC.userId !== client.userId)
-            env.send(clientC, {c: "connected", user: client.userId})
+            env.send(clientC, {c: "connected", u: client.userId})
     }
     env.send(client, {c: "connected", channel: clientChannel})
 }

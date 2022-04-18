@@ -25,7 +25,7 @@ stats.load();
 
 //config
 cfg = {
-    verbose: false,              // set to true to capture lots of debug info
+    verbose: false,             // set to true to capture lots of debug info
     verbose_adv: false,         // advanced debug info in console
 
     portTCP: 25000,
@@ -106,12 +106,12 @@ let callbacks = {
         stats.add("msgIn", 1)
         stats.add("dataIn", data)
 
-        if (nm[msg.header.cmd]) {
-            if (nm[msg.header.cmd].receive) {
-                nm[msg.header.cmd].receive(environment, client, msg)
+        if (nm[msg.header.c]) {
+            if (nm[msg.header.c].receive) {
+                nm[msg.header.c].receive(environment, client, msg)
             }
         } else {
-            _log("Unknown message type " + msg.header.cmd)
+            _log("Unknown message type " + msg.header.c)
         }
     },
 
@@ -129,6 +129,7 @@ let callbacks = {
 
 let Wrapper = require('./socketWrapper.js').Wrapper
 socketWrapper = new Wrapper(cfg, callbacks)
+environment.socketWrapper = socketWrapper
 
 
 //Shutdown Events with automatic save
