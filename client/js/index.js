@@ -1,40 +1,33 @@
-let noobyClient = new nooby;
+let noobyClient = new NoobyClient();
 
 let wrapper = {
-    onmessage: function (msg) {
-        let cmd = "m" || msg.header.c || msg.header.cmd
-        if(msg.data)
-            document.getElementById("console").innerHTML = cmd + ": "+msg.data.data
+    onmessage: function (header, payload) {
+        document.getElementById("console").innerHTML = header.m + ": " + header + ": " + payload
     },
-    log: function(){
+    log: function () {
         console.log(arguments[0])
         //document.getElementById("console").innerHTML = arguments[0]
     }
 }
 
 let testTypes = function () {
-    noobyClient.send({})    //empty data -> client should not send anything
-    noobyClient.send({header: {c: "msg"}, data: "Hello"})       //type 0
-    noobyClient.send({data: "Hello"})                           //type 2
-    noobyClient.send({header: {c: "msg"}})                      //type 3
-    //noobyClient.ping()                                          //type 4
+    noobyClient.send({}, {data: "A message!"})
 }
 
 let testChannel = function () {
     noobyClient.connect("testChannel")
-    noobyClient.send({data: "Hello"})
+    noobyClient.send({}, {data: "Hello"})
 }
 
-let randomChannel = function(){
+let randomChannel = function () {
     noobyClient.connect()
 }
 
 let test = function () {
     let start = new Date().getTime()
-    for(let i = 0; i < 100; i++)
-        noobyClient.send({data:"HellooooooooooooABC("+i+")"})
+    for (let i = 0; i < 100; i++)
+        noobyClient.send({}, {data: "HellooooooooooooABC(" + i + ")"})
     console.log("finished", (new Date().getTime() - start) + "ms")
-
 }
 
 window.onload = function () {

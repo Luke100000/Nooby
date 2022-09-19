@@ -1,14 +1,14 @@
-class SocketWEB {
+class SocketWeb {
     constructor(wrapper, port) {
         const http = require('http');
         const WebSocketServer = require('websocket').server;
         const serverHTTP = http.createServer();
-        var serverWEB = new WebSocketServer({
+        const webSocketServer = new WebSocketServer({
             httpServer: serverHTTP
         });
 
-        serverWEB.on('request', function (request) {
-            var socket = request.accept(null, request.origin);
+        webSocketServer.on('request', function (request) {
+            const socket = request.accept(null, request.origin);
             socket.isConnected = true
 
             //register client
@@ -18,21 +18,23 @@ class SocketWEB {
                 wrapper.receive(socket, message.binaryData)
             });
             socket.on('close', function (reasonCode, description) {
-                wrapper.callbacks._log('[WEB] Client has disconnected.');
+                wrapper.callbacks.log('[WebSocket] Client has disconnected.');
                 wrapper.destroySocket(socket)
             });
 
-            socket.type = "WEB"
+            socket.type = "WebSocket"
 
             socket.send = function (client, data) {      //data must be a buffer!
                 client.sendBytes(data)
             }
-        }); //end of serverTCP.on 'request'
+        });
+
         serverHTTP.on('listening', function () {
-            console.log('[WEB] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)
-        })
+            console.log('[WebSocket] Nooby running on ' + serverHTTP.address().address + ':' + serverHTTP.address().port)
+        });
+
         serverHTTP.listen(port);
     }
 }
 
-module.exports = SocketWEB
+module.exports = SocketWeb

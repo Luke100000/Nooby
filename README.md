@@ -1,100 +1,181 @@
 # Nooby
 
-Extendable Node.js multiplayer messaging server suitable for client to client applications.
+Extendable Node.js messaging server designed for easy client to client applications.
 
-# DEVELOPMENT IN PROGRESS
+Communication uses [MessagePack](https://msgpack.org/index.html) and TCP, WebSocket and a simple packet format and
+therefore works for a wide variety of
+clients.
 
-While fully functional it lacks a few features and things might change slightly.
+Client implementations provided for Lua. JavaScript is WIP.
+
+An example chat software, benchmarks and test bench is provided for Lua. JavaScript is WIP.
 
 [![Project license](https://img.shields.io/github/license/Luke100000/Nooby?style=flat-square)](https://github.com/Luke100000/Nooby/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Luke100000/Nooby?style=flat-square&logo=github)](https://github.com/Luke100000/Nooby/stargazers)
-[![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-blue.svg?style=flat-square&logo=paypal)](https://paypal.me/pools/c/8pAvKwQbHm)
 
-# Client
+# Concept
 
-Clients send packages, which consist of two parts: the header and the data.
+The concept is a peer to peer packet messenger, with a server used to avoid direct connections.
+Usage should be simple and generic, yet stable and secure with reasonably [performance](#performance).
 
-The header is meant for the server and specifies the type of packet. The data is forwared to the other clients and can contain any type of data (including binary, not null terminated).
+A Nooby server can be reused for multiple projects and handles common logic like login, session creation, game lobby
+queries etc. It also offloads the broadcasting of data to a server with potential better
+bandwidth.
 
-The header contains data required by the modules, with following global values:
+Clients send packages, which consist of two parts: the header and the payload.
+The header is meant for the server and specifies the type of packet and how to treat it. The payload is forwarded to the
+other clients and can contain any type of data (including binary). It is recommended to also use MsgPack here.
 
-* `c` the packet type (command) and the module responsible for parsing. If not present, `m` is used.
-* `l` the data segment length
-* `u` the user ID the message comes from (or empty if it's a server msg)
+Usually, messages do not confirm successful operations, but instead return errors otherwise.
 
-## Inbuilt modules
+# Modules
 
-Nooby comes with a few inbuilt modules.
+Nooby comes with a few inbuilt modules. The header contains required fields.
 
-### Msg
+* `m` the module responsible for processing, or the type of answer. Default is `message`. May also be an alias to save
+  some bytes.
+* `u` the user the response originated from, might be the sender in case of errors or pings.
 
-Default module used to transfer data to all clients
+## Connect
 
-Alias `m`, `(default)`
+Connect to a channel, disconnects from the old one if already connected. If multiple channels are required, multiple
+connections should be opened instead.
 
-* `tags` a dictionary of tags to be fullfilled
-* `data` additional data passed to the clients, not recommended
+If the channel name is omitted, a random channel is created. The creators admin tag is set to true (See (
+permissions)[#permissions]).
 
-### Connect
+Otherwise, the user joins or creates a public channel, assuming the optional password is correct.
 
-Connect to a channel, disconnects from the old one. If the user omits the channel the admin tag is set.
+Public channels are meant to be used for lobbies or global chats. Nobody can change settings on such a channel.
 
 Alias `c`
 
-* `channel` the channel name to connect, or a random free name if empty
-* `session` optionally specify the client ID if several connection from the same machine are required
+* `channel` (optional) the channel name to connect
+* `settings` (optional) a table containing channel settings, only when creating a private channel ((
+  settings)[#settings])
 
-### DirectMessage
+### Response
 
-Sends a message directly to a single client
+* `channel` the channel name chosen when creating a new channel
+
+## Message
+
+Default module used to broadcast data to all clients, except the sender.
+
+Alias `m`, `(default)`
+
+* `t` (optional) a dictionary of tags to be fulfilled
+
+## DirectMessage
+
+Sends a message directly to a single client.
 
 Alias `dm`
 
-* `user` the user ID to send to
+* `u` the user ID to send to
 
-### Tag
+## Tag
 
 Set tags for a single user.
 
+Required permission level 1, or 2 when specifying a specific user.
+
 Alias `t`
 
-* `user` the user to set the tags for, or empty to set on yourself. Required `admin` tag set for executor and will confirm the change to all admins.
+* `u` the user to set the tags for, or empty to set on yourself.
 * `tag` the tag identifier
 * `value` the tags value, or empty to unset
 
-## Reponses
+## Ping
 
-Some commands are client only and are used as responses for common actions.
+Pong. Sends back the payload.
 
-### Connected
+### Response
 
-* `channel` for yourself the channel name is also returned, in case a random one has been requested
+See (GetTags)[#GetTags].
 
-### Error
+## GetTags
+
+Retrieves all current tags for a user.
+
+Required permission level 1.
+
+### Response
+
+* `tags` the entire tag directory currently set.
+
+# Responses
+
+Client only response.
+
+## Error
 
 * `reason` the reason for the error
     * e.g. `permission denied`
 * `header` the header responsible for the error
 
-### Success
-
-Some commands confirm themselve on success.
-
-* `header` the successful executed commands header
-
-### Shutdown
+## Shutdown
 
 Server has been shut down.
 
-## Lua
+# Permissions
 
-```lua
-local noobyClient = require("nooby")("localhost", "25000")
+Some modules require a permission level. Having the `admin` tag grants level 2, being on a public server grants level 1,
+everyone else has level 0.
+
+# Performance
+
+The Lua Client has been benchmarked local and on a test server with 30 ms ping and a 45/10 Mbit/s bandwidth.
+
+Tests were performed on packages and raw data with different sizes, with and without header.
 
 -- todo
+
+## Local
+
+# Lua Client
+
+Located in `client/lua/`, with `nooby.lua`, `noobyThread` and `messagePack.lua` the required files.
+
+```lua
+-- open connection, connect to channel
+local nooby = require("nooby")("localhost", 25000, "some global channel")
+
+-- wait 3 seconds for channel join confirmation
+local header, payload = nooby:demand(3)
+assert(header and header.m == "connected", "Hmm, connection failed")
+local userId = header.u
+
+-- setting some tags
+nooby:send({ m = "tag", tag = "filter", value = "test" })
+
+-- sending a welcome message too everyone else, no header required
+nooby:send(false, { data = "Welcome!" })
+
+-- awaiting other messages
+while true do
+	local header, payload = nooby:receive()
+	if header then
+		-- incoming data
+		print(payload.data)
+		io.flush()
+	elseif header == false then
+		-- something went wrong, usually connection issues
+		print(payload)
+		io.flush()
+	else
+		-- nothing new
+		love.timer.sleep(1)
+		
+		-- send stuff to everyone with the same tags
+		nooby:send({ tags = { filter = "test" } }, { data = "Hey, I'm user " .. userId })
+	end
+end
 ```
 
-## Javascript
+# Javascript Client
+
+WIP
 
 ```js
 let noobyClient = new nooby;    //define the nooby class
@@ -110,42 +191,31 @@ noobyClient.send(header, data)    //send `header`, and `data`
 
 # Server
 
-## Settings
+Start the server using nodejs.
 
-[server/nooby.js Line 27](server/nooby.js#L27)
-
-```js
-cfg = {
-    verbose: true,              // set to true to capture lots of debug info
-    verbose_adv: false,         // advanced debug info in console
-
-    portTCP: 25000,
-    portUDP: 25001,
-    portWEB: 25002,
-    bufferSize: 1024 * 64,      // buffer allocated per each socket client
-
-    checkAlive: 10 * 1000,      // check if every client is alive every 10 seconds
-}
+```bash
+cd server
+nodejs ./nooby.js
 ```
 
-- `verbose: true`: important logs will be printed.
-- `verbose_adv: true`: every single log will be printed.(DEBUG ONLY!!)
+## Settings
 
-- `portTCP: 25000`: The port of the TCP Socket
-- `portUDP: 25001`: The port of the UDP Socket
-- `portWEB: 25002`: The port of the WEB Socket
-- `bufferSize: 1024 * 64`: set the max size of the buffer. Messages should not be bigger than that!
+[server/config.json](server/config.json)
 
-- `checkAlive: false`: Nooby won't send checkAlive messages to the clients
-- `checkAlive: number`: Nooby send every number ms checkAlive messages to the clients (the clients will reply them automatically see in the client folder)
+- `logging`: additional information will be printed to the console.
+- `verbose`: every header of incoming and outgoing messages will be printed.
+
+- `portTCP`: The port of the TCP Socket
+- `portWebSocket`: The port of the WebSocket
 
 ## Own Modules
 
-`myModule.js`
+To get the module working, you have to put it into the `nooby_modules` folder. The name could be "myModule.js"
+In aliases, you can define alternative, shorter identifiers, but make sure to avoid duplicates.
 
 ```js
 let init = function (env) {
-    // populate the environment with module specific variables
+    // populate the environment at server load with module specific variables
 }
 
 let receive = function (env, client, msg) {
@@ -162,37 +232,29 @@ module.exports = {
 }
 ```
 
-- To get the module working, you have to put it into the nooby_modules folder. The name could be "myModule.js"
-- If you want to send a message to your module, you have to put into the `HEADER: {"c":"myModule"}`
-- In aliases, you can define alternative, shorter identifiers, e.g. `HEADER: {"c":"mm"}`, but make sure to avoid duplicates.
-- init
-    - in `env` you can define tables for your specific module data (env won't be only for your module. So if you dont want to check if no other module hast defined that name, you can first define a table `env.myModule = {}` and then you can define your variable like `env.myModule.var` or/and table `env.myModule.table = {}`). Of course you can also use: `env.myvar` if you are sure, no other module will !init! that too.
-    - will be called at noobyStart
-- receive
-    - in `env` you will find all the environment variables from all modules: like `env.channels` (have a look at [server/nooby_modules/connect.js](server/nooby_modules/connect.js))
-    - `client` is the client itself. you can read client.userID and so on
-    - `msg` is the input message.
-      ```js
-      Msg = {
-        length: 0,    //length of header
-        size: 0,      //length of data
-        header: {
-            c: "packetName"
-        },
-        data: Buffer,
-        awaitingHeader: false,//internal use
-        awaitingData: false   //internal use
-      }
-      ```
+# Packet Format
 
-# Format of incoming message
+This section is only relevant when writing an own client and describes the binary representation of a packet.
 
-This section is only relevant when writing an own client and desribes the binary format of the messages.
+Data is transmitted from server to client in chunks, no bigger than `256^2` bytes:
 
-A leading byte defines the type of the message.
+- `{userId}{chunkSize}{chunk}`
+  Messages from different users may interleave, therefore every user needs to concat chunks in its own buffer.
 
-- `{headerLength}{header}{data}`
+Data is directly transmitted from client to server as data can not interleave.
 
-`headerLength` 3 byte length of the header data  
-`header` is a messagePacked header containing module related data  
-`data` is the binary data segment, its length is specified in the header  
+One or more chunks may form a message:
+
+- `{headerLength}{payloadLength}{header}{payload}`
+
+`headerLength` 2 byte length of the header data    
+`payloadLength` 4 bytes length of the payload  
+`header` is a messagePacked header containing module related data
+`payload` is the payload, its length is specified in the header and usage is completely up to the client
+
+It is common, but not required, that the payload starts with a leading byte defining its compression state:
+
+- `0` uncompressed
+- `1` LZ4
+- `2` zlib
+  The actual payload is also a MsgPack object

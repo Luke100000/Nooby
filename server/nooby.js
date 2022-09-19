@@ -19,100 +19,48 @@
  *
  **/
 
-mainPath = "./server/";
+const fs = require('fs');
+
 stats = require("./stats.js");
 stats.load();
 
 //config
-cfg = {
-    verbose: false,             // set to true to capture lots of debug info
-    verbose_adv: false,         // advanced debug info in console
-
-    portTCP: 25000,
-    portUDP: 25001,
-    portWEB: 25002,
-    bufferSize: 1024 * 128,     // buffer allocated per each socket client
-
-    checkAlive: 10 * 1000,      // check if every client is alive every 10 seconds
-}
+// noinspection JSCheckFunctionSignatures
+config = JSON.parse(fs.readFileSync('./config.json'));
 
 //logger
-_log = function () {
-    if (cfg.verbose) console.log.apply(console, arguments)
+log = function () {
+    if (config.logging) console.log.apply(console, arguments)
 }
-_logAdv = function () {
-    if (cfg.verbose_adv) console.log.apply(console, arguments)
-}
-
-//module data and methods environment
-let environment = {
-    _log: _log,
-    Msg: require('./socketWrapper.js').Msg,
-
-    msgToPacket: new (require('./socketWrapper.js')).Wrapper(null, null).msgToPacket,
-    stats: stats,
-
-    sendPacket: function (client, packet) {
-        length = socketWrapper.sendPacket(client, packet)
-
-        stats.add("msgOut", 1)
-        stats.add("dataOut", length)
-    },
-
-    send: function (client, header, data) {
-        length = socketWrapper.send(client, header, data)
-
-        stats.add("msgOut", 1)
-        stats.add("dataOut", length)
-    },
-
-    sendAdmins: function (channel, header, data) {
-        for (const client of channel.clients) {
-            let tagsClient = environment.clientChannelTags[client.userId]
-            if (tagsClient && tagsClient.admin) {
-                environment.send(client, header, data)
-            }
-        }
-    }
+verbose = function () {
+    if (config.verbose) console.info.apply(console, arguments)
 }
 
-//modules
-nm = {}
-let nmpath = require("path").join(__dirname, "nooby_modules");
-require("fs").readdirSync(nmpath).forEach(function (file) {
-    if (file.indexOf(".js") !== -1) {
-        file = file.replace(".js", "")
-        console.log("[Module] load " + file)
-        nm[file] = require("./nooby_modules/" + file + ".js");
-
-        //register aliases
-        nm[file].aliases = nm[file].aliases || []
-        for (let i = 0; i < nm[file].aliases.length; i++) {
-            nm[nm[file].aliases[i]] = nm[file]
-        }
-
-        //init
-        if (nm[file].init) {
-            nm[file].init(environment)
-        }
-    }
-});
 
 //wrapper callbacks
 let callbacks = {
-    receive: function (client, msg) {
-        _log(msg)
-        let data = 4 + (msg.length || 0) + (msg.size || 0)
-        stats.add("msgIn", 1)
-        stats.add("dataIn", data)
+    log: log,
 
-        if (nm[msg.header.c]) {
-            if (nm[msg.header.c].receive) {
-                nm[msg.header.c].receive(environment, client, msg)
+    receive: function (client, message) {
+        stats.add("msgIn", 1)
+        stats.add("dataIn", 6 + message.headerSize + message.payloadSize)
+
+        verbose("received", client.userId, message)
+
+        if (noobyModules[message.header.m]) {
+            if (noobyModules[message.header.m].receive) {
+                noobyModules[message.header.m].receive(environment, client, message)
             }
         } else {
-            _log("Unknown message type " + msg.header.c)
+            log("Unknown message type '" + message.header.m + "'")
         }
+    },
+
+    send: function (receiver, sender, message) {
+        stats.add("msgOut", 1)
+        stats.add("dataOut", message.headerSize + message.payloadSize)
+
+        verbose("sent", receiver.userId + " to " + sender.userId, message)
     },
 
     newClient: function (client) {
@@ -120,30 +68,61 @@ let callbacks = {
     },
 
     destroySocket: function (client, info) {
-
+        for (let m in noobyModules) {
+            if (noobyModules[m].destroySocket) {
+                noobyModules[m].destroySocket(environment, client)
+            }
+        }
     },
-
-    _log: _log,
 };
 
+//module data and helper functions
+let environment = {
+    log: log,
+    Message: require('./socketWrapper.js').Message,
+    socketWrapper: new (require('./socketWrapper.js').Wrapper)(config, callbacks),
 
-let Wrapper = require('./socketWrapper.js').Wrapper
-socketWrapper = new Wrapper(cfg, callbacks)
-environment.socketWrapper = socketWrapper
+    sendError: function (client, header, reason) {
+        this.socketWrapper.send(client, client, {
+            "header": header,
+            "reason": reason
+        })
+    }
+}
 
+//modules
+noobyModules = {}
+require("fs").readdirSync("./nooby_modules").forEach(function (file) {
+    if (file.indexOf(".js") !== -1) {
+        file = file.replace(".js", "")
+        console.log("[Module] load " + file)
+        noobyModules[file] = require("./nooby_modules/" + file + ".js");
 
-//Shutdown Events with automatic save
+        //register aliases
+        noobyModules[file].aliases = noobyModules[file].aliases || []
+        for (let i = 0; i < noobyModules[file].aliases.length; i++) {
+            noobyModules[noobyModules[file].aliases[i]] = noobyModules[file]
+        }
+
+        //init
+        if (noobyModules[file].init) {
+            noobyModules[file].init(environment)
+        }
+    }
+});
+
+// Shutdown Events with automatic save
 process.on('exit', function () {
     console.log('[exit] routine start');
     stats.save();
-    socketWrapper.shutdown(); //shutdown sockets
+    environment.socketWrapper.shutdown();
     console.log('[exit] routine end');
 });
 
-//process.on('uncaughtException', function() { process.exit();});  //go to process.on("exit")
 process.on('SIGINT', function () {
     process.exit();
-});             //go to process.on("exit")
+});
+
 process.on('SIGTERM', function () {
     process.exit();
 });

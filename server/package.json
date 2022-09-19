@@ -1,5 +1,5 @@
 {
-  "name": "Nooby_Server",
+  "name": "nooby_server",
   "version": "1.0.0",
   "description": "Node.js multiplayer message server suitable for client to client applications ",
   "author": "Thecoolpeople <benjamin@katzmair.eu>",
@@ -8,6 +8,7 @@
     "start": "node nooby.js"
   },
   "dependencies": {
-    "websocket": "^1.0.31"
+    "websocket": "^1.0.31",
+    "msgpack-js": "^0.3.0"
   }
 }

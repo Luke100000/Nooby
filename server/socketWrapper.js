@@ -1,151 +1,115 @@
-class Msg {
-    constructor(header, data) {
-        this.length = 0         //length of header
-        this.size = 0           //size of data
-        this.header = header    //header
-        this.data = data        //data segment
-        this.awaitingHeader = true
-        this.awaitingData = true
+const ParserState = {
+    HEADER: 1,
+    PAYLOAD: 2,
+    DONE: 3,
+}
+
+class Message {
+    constructor(header, payloadMessage) {
+        this.headerSize = 0
+        this.payloadSize = payloadMessage && payloadMessage.payloadSize || 0
+        this.header = header
+        this.headerPacket = null
+        this.payloadMessage = payloadMessage
+        this.state = ParserState.HEADER
+        this.payloadReceived = 0
+        this.listeners = []
     }
 }
 
-let isEmptyString = function (str) {
-    return str == null || str.length === 0;
-}
+let msgpack = require("msgpack-js")
 
-//converts a positive integer (max 65536) to a 3 bytes string
-let intTo3Bytes = function (l) {
-    return String.fromCharCode(Math.floor(l / 65536)) + String.fromCharCode(Math.floor(l / 256) % 256) + String.fromCharCode(l % 256);
-}
-
-let msgpack = require("./msgpack.js")
+// the headers max size
+let maxBufferSize = 256 * 256
+let minPacketSize = 1024
 
 class Wrapper {
     constructor(cfg, callbacks) {
-        if (cfg == null && callbacks == null) return
         this.clients = []
 
-        this.cfg = cfg
         this.callbacks = callbacks
 
-        new (require("./sockets/tcp.js"))(this, cfg.portTCP)        //include tcp socket
-        new (require("./sockets/udp.js"))(this, cfg.portUDP)        //include udp socket
-        new (require("./sockets/web.js"))(this, cfg.portWEB)        //include web socket
-
-        if (cfg.checkAlive) {                                       //only check alive when defined
-            setInterval(function (self) {
-                let now = new Date();
-                let check = 0
-                self.clients.forEach(function (client) {
-                    if (now - client.lastMsg > cfg.checkAlive) {
-                        self.checkAlive(client)
-                        check++;
-                    }
-                })
-                if (check)
-                    self.callbacks._log("checkAlive for devices:" + self.clients.length, "send to:" + check)
-            }, cfg.checkAlive, this)
-        }
+        // launch sockets
+        new (require("./sockets/tcp.js"))(this, cfg.portTCP)
+        new (require("./sockets/web.js"))(this, cfg.portWebSocket)
     }
 
     newClient = function (client) {
-        client.buffer = Buffer.allocUnsafe(this.cfg.bufferSize);
+        client.buffer = Buffer.allocUnsafe(maxBufferSize * 2 + 12);
         client.bytesReceived = 0
 
-        client.lastMsg = new Date();
-
-        this.callbacks._log("New client: " + client.userId + " at " + (new Date().toISOString()))
+        this.callbacks.log("New client: " + client.ID + " at " + (new Date().toISOString()))
 
         this.clients.push(client)
         this.callbacks.newClient(client)
     }
 
-    checkAlive = function (client) {
-        let self = this
-
-        let packet = self.msgToPacket(new Msg())
-        self.sendPacket(client, packet)
-    }
-
     receive = function (client, data) {
-        //shredder package
-        let self = this;
-        if (data.length > this.cfg.bufferSize) {
-            for (let i = 0; i < Math.ceil(data.length / this.cfg.bufferSize); i++) {
-                self.receive(client, data.subarray(i * this.cfg.bufferSize, (i+1) * this.cfg.bufferSize))
-            }
-            return;
-        }
-
-        client.lastMsg = new Date()
-
-        //extend buffer if necessary
-        if (client.bytesReceived + data.length > client.buffer.length) {
-            let oldBuffer = client.buffer
-            client.buffer = Buffer.allocUnsafe(client.bytesReceived + data.length);
-            oldBuffer.copy(client.buffer, 0, 0, client.bytesReceived)
-            this.callbacks._log("Increased buffer size for client " + client.userId + " to " + (client.bytesReceived + data.length) + " bytes")
-        }
+        let self = this
 
         //append data
         client.bytesReceived += data.copy(client.buffer, client.bytesReceived)
 
         //either wait until packet is there or start processing new data
         while (true) {
-            if (client.receiving) {
-                //parsing current incoming message
-                if (client.receiving.awaitingHeader) {
-                    if (client.bytesReceived >= client.receiving.length) {
-                        let header = client.buffer.slice(0, client.receiving.length)
-                        try {
-                            //msgpack
-                            client.receiving.header = msgpack.decode(header)
-                            client.receiving.size = client.receiving.header.l || 0
-                        } catch (err) {
-                            self.destroySocket(client, "JSON_malformed")
-                            this.callbacks._log("[JSON] error:", header)
-                            return
-                        }
-                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.length, client.bytesReceived)
-                        client.receiving.awaitingHeader = false
-
-                        //no data to receive
-                        if (client.receiving.size === 0) {
-                            client.receiving.awaitingData = false
-                        }
-                    } else {
-                        //wait
-                        break
-                    }
-                } else if (client.receiving.awaitingData) {
-                    if (client.bytesReceived >= client.receiving.size) {
-                        client.receiving.data = Buffer.from(client.buffer.slice(0, client.receiving.size))
-                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.size, client.bytesReceived)
-                        client.receiving.awaitingData = false
-                    } else {
-                        //wait
-                        break
-                    }
-                } else {
-                    //done
-                    client.receiving.header.c = client.receiving.header.c || "m"
-                    this.callbacks.receive(client, client.receiving)
-                    client.receiving = false
-                }
-            } else {
-                //wait for first 4 bytes
-                if (client.bytesReceived >= 3) {
-                    let length = client.buffer.readUInt8(0) * 256 * 256 + client.buffer.readUInt8(1) * 256 + client.buffer.readUInt8(2)
-
-                    //cut away type and length
-                    client.bytesReceived = client.buffer.copy(client.buffer, 0, 3, client.bytesReceived)
-
+            if (!client.receiving) {
+                //wait for first 6 bytes
+                if (client.bytesReceived >= 6) {
                     //start new message
-                    client.receiving = new Msg()
-                    client.receiving.length = length
+                    client.receiving = new Message(client)
+
+                    //parse lengths
+                    client.receiving.headerSize = client.buffer.readUInt16BE(0)
+                    client.receiving.payloadSize = client.buffer.readUint32BE(2)
+
+                    //cut length
+                    client.bytesReceived = client.buffer.copy(client.buffer, 0, 6, client.bytesReceived)
                 } else {
                     break
                 }
+            } else if (client.receiving.state === ParserState.HEADER) {
+                //parsing current incoming message
+                if (client.bytesReceived >= client.receiving.headerSize) {
+                    if (client.receiving.headerSize === 0) {
+                        client.receiving.header = {"m": "message"}
+                    } else {
+                        let header = client.buffer.subarray(0, client.receiving.headerSize)
+                        client.receiving.header = msgpack.decode(header)
+                        client.receiving.header.m = client.receiving.header.m || "message"
+                        client.bytesReceived = client.buffer.copy(client.buffer, 0, client.receiving.headerSize, client.bytesReceived)
+                    }
+
+                    //process packet and stream the payload later
+                    this.callbacks.receive(client, client.receiving)
+
+                    //next state
+                    client.receiving.state = ParserState.PAYLOAD
+                } else {
+                    break
+                }
+            } else if (client.receiving.state === ParserState.PAYLOAD) {
+                //receive and forward payload
+                if (client.receiving.payloadSize === 0 || client.receiving.payloadReceived === client.receiving.payloadSize) {
+                    client.receiving.state = ParserState.DONE
+                    client.receiving = false
+                } else {
+                    let remaining = client.receiving.payloadSize - client.receiving.payloadReceived
+                    let chunk = Math.min(remaining, client.bytesReceived, 256 ** 2)
+                    if (chunk >= minPacketSize || chunk === remaining) {
+                        let payload = Buffer.from(client.buffer.subarray(0, chunk))
+                        client.bytesReceived = client.buffer.copy(client.buffer, 0, chunk, client.bytesReceived)
+                        client.receiving.payloadReceived += chunk
+
+                        //call listener
+                        for (const receiver of client.receiving.listeners) {
+                            self.sendChunk(receiver, client, payload)
+                        }
+                    } else {
+                        break
+                    }
+                }
+            } else {
+                break
             }
         }
     }
@@ -153,55 +117,73 @@ class Wrapper {
     //notify all clients of nooby shutdown
     shutdown = function () {
         let self = this
-        this.clients.forEach(client => self.send(client, {"c": "shutdown"}));
+        this.clients.forEach(client => self.sendMessage(client, client, new Message({"m": "shutdown"})));
     }
 
     //destroys a socket and removes it from the client list
     destroySocket = function (client, info) {
-        //todo close actual socket to prevent further communication
         let i = this.clients.indexOf(client)
         if (i != null) {
-            this.clients.splice(i)
+            this.clients.splice(i, 1)
             this.callbacks.destroySocket(client, info)
+            client.end()
         }
     }
 
-    //pack a msg object into a string
-    msgToPacket = function (msg) {
-        if (isEmptyString(msg.data)) {
-            let data_header = msgpack.encode(msg.header)
-            let buf = Buffer.from(intTo3Bytes(data_header.length))
-            return Buffer.concat([buf, data_header], buf.length + data_header.length)
+    //pack a message object into a buffer
+    messageToPacket = function (message) {
+        if (message.header) {
+            let header = msgpack.encode(message.header)
+            let size = new Uint8Array([
+                (header.length >> 8) & 0xFF, (header.length) & 0xFF, // header length
+                (message.payloadSize >> 24) & 0xFF, (message.payloadSize >> 16) & 0xFF, (message.payloadSize >> 8) & 0xFF, (message.payloadSize) & 0xFF // payload length
+            ])
+            return Buffer.concat([size, header], 6 + header.length)
         } else {
-            msg.header.l = msg.data.length
-            let data_header = msgpack.encode(msg.header)
-            let buf = Buffer.from(intTo3Bytes(data_header.length))
-            return Buffer.concat([buf, data_header, msg.data], buf.length + data_header.length + msg.data.length)
+            return new Uint8Array([
+                0, 0,
+                (message.payloadSize >> 24) & 0xFF, (message.payloadSize >> 16) & 0xFF, (message.payloadSize >> 8) & 0xFF, (message.payloadSize) & 0xFF // payload length
+            ])
         }
     }
 
-    send = function (client, header, data) {
+    //send a header-only message
+    send = function (receiver, sender, header) {
         let self = this
-        let packet = self.msgToPacket(new Msg(header, data))
-        if (packet) {
-            client.send(client, packet)
-            return packet.length
-        } else {
-            return 0
+        self.sendMessage(receiver, sender, new Message(header))
+    }
+
+    //send a message
+    sendMessage = function (receiver, sender, message) {
+        let self = this
+        this.callbacks.send(receiver, sender, message)
+
+        //build header binary
+        if (!message.headerPacket) {
+            message.headerPacket = self.messageToPacket(message)
+        }
+
+        //send header
+        self.sendChunk(receiver, sender, message.headerPacket)
+
+        //adds a listener to receive the payload
+        if (message.payloadMessage) {
+            message.payloadMessage.listeners.push(receiver)
         }
     }
 
-    sendPacket = function (client, packet) {
-        if (packet) {
-            client.send(client, packet)
-            return packet.length
-        } else {
-            return 0
-        }
+    //send a message
+    sendChunk = function (receiver, sender, chunk) {
+        let size = chunk.length - 1
+        receiver.send(receiver, new Uint8Array([
+            (sender.userId >> 8) & 0xFF, (sender.userId) & 0xFF, // userid
+            (size >> 8) & 0xFF, (size) & 0xFF // chunk length
+        ]))
+        receiver.send(receiver, chunk)
     }
 }
 
 module.exports = {
     Wrapper,
-    Msg,
+    Message,
 }

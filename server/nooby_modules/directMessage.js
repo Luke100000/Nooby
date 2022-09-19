@@ -1,32 +1,17 @@
 let receive = function (env, client, msg) {
-    let send = false;
+    let sent = false;
 
-    //check if receiver exists
-    if (msg.header.user != null) {
-        //create return msg
-        let header = {
-            c: "dm",
-            u: client.userId,
-            data: msg.header.data
-        }
-
-        let msgReturn = new env.Msg(header, msg.data);
-        let packet = env.msgToPacket(msgReturn)
-
-        for (const target of env.socketWrapper.clients) {
-            if (target.userId === msg.header.user) {
-                env.sendPacket(target, packet)
-                send = true;
-            }
+    for (const receiver of env.socketWrapper.clients) {
+        if (receiver.userId === msg.header.u) {
+            let answer = new env.Message(null, msg);
+            env.socketWrapper.sendMessage(receiver, client, answer)
+            sent = true;
+            break;
         }
     }
 
-    if (!send) {
-        env.send(client, {
-            c: "error",
-            reason: "user not found",
-            header: msg.header
-        })
+    if (!sent) {
+        env.sendError(client, msg, "user not found")
     }
 }
 

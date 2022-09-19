@@ -1,0 +1,6 @@
+{
+  "logging": true,
+  "verbose": false,
+  "portTCP": 25000,
+  "portWebSocket": 25002
+}

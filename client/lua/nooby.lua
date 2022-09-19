@@ -17,40 +17,49 @@ function nooby(server, port, channel, compression, compressionLevel)
     self.port = port
     self.settings = {
         channel = channel,
-        session = os.clock(),
         compression = compression or "lz4",
         compressionLevel = compressionLevel or -1,
     }
 
     --thread communication
-    self.channel_send = love.thread.newChannel()
-    self.channel_receive = love.thread.newChannel()
+    self.sendChannel = love.thread.newChannel()
+    self.receiveChannel = love.thread.newChannel()
 
     --thread
     self.thread = love.thread.newThread(dir .. "/noobyThread.lua")
-    self.thread:start(dir, self.channel_send, self.channel_receive, self.server, self.port, self.settings)
+    self.thread:start(dir, self.sendChannel, self.receiveChannel, self.server, self.port, self.settings)
 
     return setmetatable(self, { __index = meta })
 end
 
 function meta:send(header, data)
-    self.channel_send:push({ header, data })
+    self.sendChannel:push({ header, data })
 end
 
 function meta:disconnect()
-    self.channel_send:push("disconnect")
+    self.sendChannel:push("disconnect")
     self.__index = function()
         error("connected closed")
     end
 end
 
-function meta:receive()
-    local msg = self.channel_receive:pop()
+function meta:demand(timeout)
+    local msg = self.receiveChannel:demand(timeout)
 
     if type(msg) == "string" then
         return false, msg
-    else
-        return msg
+    elseif msg then
+        return msg[1], msg[2]
+    end
+end
+
+function meta:receive()
+    local msg = self.receiveChannel:pop()
+
+    if type(msg) == "string" then
+        return false, msg
+    elseif msg then
+        return msg[1], msg[2]
     end
 end
 

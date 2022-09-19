@@ -16,7 +16,6 @@ RUN npm install
 COPY . ./server/
 
 EXPOSE 25000
-EXPOSE 25001/udp
 EXPOSE 25002
 
 CMD [ "node", "server/nooby.js" ]

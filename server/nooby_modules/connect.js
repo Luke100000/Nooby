@@ -1,78 +1,74 @@
 let init = function (env) {
     env.channels = {}
-
-    env.clientChannel = {}
-    env.clientChannelTags = {}
     env.lastChannelId = 0
 
-    env.lastSessionID = 0;
-    env.lastID = 0;
+    env.lastUserID = 0;
     env.userIds = {}
 }
 
+let destroySocket = function (env, client) {
+    //disconnect from channel
+    if (client.channel) {
+        let channel = env.channels[client.channel]
+        let i = channel.clients.indexOf(client)
+        channel.clients.splice(i, 1)
+    }
+}
+
 let receive = function (env, client, msg) {
-    //client identifier
-    client.session = client.ID + "_" + (msg.header.session || env.lastSessionID++).toString()
-
-    //assign user ID or create new
-    client.userId = env.userIds[client.session] || env.lastID++
-    env.userIds[client.session] = client.userId
-
-    let clientChannel = env.clientChannel[client.userId]
+    //assign a unique id since the ID would expose the IP
+    client.userId = client.userId || env.lastUserID++
 
     //disconnect from old channel
-    if (clientChannel) {
-        let channel = env.channels[clientChannel]
+    if (client.channel) {
+        let channel = env.channels[client.channel]
         let i = channel.clients.indexOf(client)
-        channel.clients.splice(i)
+        channel.clients.splice(i, 1)
     }
 
     //reset client data
     let tags = {}
-    env.clientChannelTags[client.userId] = tags
 
     //set new channel name, or random if no name specified
     if (msg.header.channel) {
-        clientChannel = msg.header.channel.toString()
+        client.channel = msg.header.channel.toString()
     } else {
-        clientChannel = env.lastChannelId.toString()
-        env.lastChannelId++
+        client.channel = (env.lastChannelId++).toString()
 
         //private channel, first user is an admin
         tags.admin = true
     }
 
     //create new channel if not existing
-    if (env.channels[clientChannel] == null) {
-        env.channels[clientChannel] = {
-            //todo unused
-            name: msg.name || clientChannel,
-            description: msg.channel == null && msg.description || "public",
+    if (env.channels[client.channel] == null) {
+        env.channels[client.channel] = {
+            name: tags.admin && msg.header.name || client.channel,
+            description: tags.admin && msg.header.description || "",
             clients: [],
+            tags: {},
         }
 
-        env._log("channel created:", clientChannel)
-        env.stats.add("channels", 1)
+        env.log("Channel created: ", client.channel)
     }
 
-    let c = env.channels[clientChannel]
+    let channel = env.channels[client.channel]
 
     //add client to channel
-    c.clients.push(client)
-    env.clientChannel[client.userId] = clientChannel
+    channel.clients.push(client)
+    channel.tags[client.userId] = tags
 
-    //notify other user
-    for (const clientC of c.clients) {
-        if (clientC.userId !== client.userId)
-            env.send(clientC, {c: "connected", u: client.userId})
+    //notify other users
+    for (const receiver of channel.clients) {
+        if (receiver.userId !== client.userId) env.socketWrapper.send(receiver, client, {m: "connected"})
     }
-    env.send(client, {c: "connected", channel: clientChannel})
+    env.socketWrapper.send(client, client, {m: "connected", channel: client.channel})
 }
 
 let aliases = ["c"]
 
 module.exports = {
     init,
+    destroySocket,
     receive,
     aliases,
 }
