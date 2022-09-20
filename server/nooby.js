@@ -76,22 +76,25 @@ let callbacks = {
     },
 };
 
+noobyModules = {}
+
 //module data and helper functions
 let environment = {
     log: log,
     Message: require('./socketWrapper.js').Message,
     socketWrapper: new (require('./socketWrapper.js').Wrapper)(config, callbacks),
+    noobyModules: noobyModules,
 
-    sendError: function (client, header, reason) {
+    sendError: function (client, msg, reason) {
         this.socketWrapper.send(client, client, {
-            "header": header,
+            "m": "error",
+            "header": msg.header,
             "reason": reason
         })
     }
 }
 
 //modules
-noobyModules = {}
 require("fs").readdirSync("./nooby_modules").forEach(function (file) {
     if (file.indexOf(".js") !== -1) {
         file = file.replace(".js", "")

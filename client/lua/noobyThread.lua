@@ -89,7 +89,8 @@ local function connect()
 	packMessage({
 		m = "connect",
 		channel = settings.channel,
-		settings = settings.channel,
+		settings = settings.settings,
+		password = settings.password,
 	})
 	
 	--success

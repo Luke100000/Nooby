@@ -51,6 +51,7 @@ Public channels are meant to be used for lobbies or global chats. Nobody can cha
 Alias `c`
 
 * `channel` (optional) the channel name to connect
+* `password` (optional) password if the channel is password protected
 * `settings` (optional) a table containing channel settings, only when creating a private channel ((
   settings)[#settings])
 

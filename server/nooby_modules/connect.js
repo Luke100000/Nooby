@@ -43,6 +43,8 @@ let receive = function (env, client, msg) {
         env.channels[client.channel] = {
             name: tags.admin && msg.header.name || client.channel,
             description: tags.admin && msg.header.description || "",
+            password: null,
+            visible: false,
             clients: [],
             tags: {},
             lastUserID: 0,
@@ -53,6 +55,13 @@ let receive = function (env, client, msg) {
 
     let channel = env.channels[client.channel]
 
+    //check password
+    if (channel.password && channel.password !== msg.header.password) {
+        client.channel = false
+        env.sendError(client, msg, "wrong password")
+        return
+    }
+
     //assign a unique id since the ID would expose the IP
     //todo id overflow!
     client.userId = client.userId || channel.lastUserID++
@@ -60,6 +69,12 @@ let receive = function (env, client, msg) {
     //add client to channel
     channel.clients.push(client)
     channel.tags[client.userId] = tags
+
+    //apply initial settings
+    if (msg.header.settings) {
+        console.log("dhfjk")
+        env.noobyModules.settings.receive(env, client, msg)
+    }
 
     //notify other users
     for (const receiver of channel.clients) {
