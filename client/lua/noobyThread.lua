@@ -32,7 +32,7 @@ local ZERO_SHORT = char(0, 0)
 
 --pack a message
 local function packMessage(header, payload)
-	if payload and false then
+	if payload then
 		--pack
 		payload = packer.pack(payload)
 		
@@ -89,6 +89,7 @@ local function connect()
 	packMessage({
 		m = "connect",
 		channel = settings.channel,
+		settings = settings.channel,
 	})
 	
 	--success
@@ -114,7 +115,7 @@ local function receive(user)
 		statuses[user] = {
 			headerSize = headerSize,
 			payloadSize = payloadSize,
-			header = { user = user },
+			header = { u = user, m = "message" },
 			payload = { },
 			state = headerSize > 0 and "header" or payloadSize > 0 and "payload" or "done"
 		}
@@ -142,8 +143,6 @@ local function receive(user)
 		local payload = buffers[user]:sub(1, statuses[user].payloadSize)
 		
 		--decompress
-		--todo
-		--[[
 		local compressionByte = payload:byte(1, 1)
 		if compressionByte == 0 then
 			payload = packer.unpack(payload:sub(2))
@@ -152,7 +151,6 @@ local function receive(user)
 		else
 			payload = packer.unpack(love.data.decompress("string", "zlib", payload:sub(2)))
 		end
-		--]]
 		
 		buffers[user] = buffers[user]:sub(statuses[user].payloadSize + 1)
 		

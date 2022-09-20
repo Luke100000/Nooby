@@ -45,7 +45,7 @@ let callbacks = {
         stats.add("msgIn", 1)
         stats.add("dataIn", 6 + message.headerSize + message.payloadSize)
 
-        verbose("received", client.userId, message)
+        verbose("received", client.ID, message)
 
         if (noobyModules[message.header.m]) {
             if (noobyModules[message.header.m].receive) {
@@ -60,7 +60,7 @@ let callbacks = {
         stats.add("msgOut", 1)
         stats.add("dataOut", message.headerSize + message.payloadSize)
 
-        verbose("sent", receiver.userId + " to " + sender.userId, message)
+        verbose("sent", receiver.ID + " to " + sender.ID, message)
     },
 
     newClient: function (client) {

@@ -7,7 +7,7 @@ require("testbench")
 os.exit()
 --]]
 
----[[
+--[[
 require("benchmark")
 os.exit()
 --]]

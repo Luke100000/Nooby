@@ -1,24 +1,22 @@
 let init = function (env) {
     env.channels = {}
     env.lastChannelId = 0
-
-    env.lastUserID = 0;
-    env.userIds = {}
 }
 
 let destroySocket = function (env, client) {
     //disconnect from channel
     if (client.channel) {
         let channel = env.channels[client.channel]
+        for (const receiver of channel.clients) {
+            if (receiver.userId !== client.userId) env.socketWrapper.send(receiver, client, {m: "disconnected"})
+        }
+
         let i = channel.clients.indexOf(client)
         channel.clients.splice(i, 1)
     }
 }
 
 let receive = function (env, client, msg) {
-    //assign a unique id since the ID would expose the IP
-    client.userId = client.userId || env.lastUserID++
-
     //disconnect from old channel
     if (client.channel) {
         let channel = env.channels[client.channel]
@@ -33,6 +31,7 @@ let receive = function (env, client, msg) {
     if (msg.header.channel) {
         client.channel = msg.header.channel.toString()
     } else {
+        //todo make sure this channel is available
         client.channel = (env.lastChannelId++).toString()
 
         //private channel, first user is an admin
@@ -46,12 +45,17 @@ let receive = function (env, client, msg) {
             description: tags.admin && msg.header.description || "",
             clients: [],
             tags: {},
+            lastUserID: 0,
         }
 
         env.log("Channel created: ", client.channel)
     }
 
     let channel = env.channels[client.channel]
+
+    //assign a unique id since the ID would expose the IP
+    //todo id overflow!
+    client.userId = client.userId || channel.lastUserID++
 
     //add client to channel
     channel.clients.push(client)
