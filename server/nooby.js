@@ -47,9 +47,9 @@ let callbacks = {
 
         verbose("received", client.ID, message)
 
-        if (noobyModules[message.header.m]) {
-            if (noobyModules[message.header.m].receive) {
-                noobyModules[message.header.m].receive(environment, client, message)
+        if (noobyModulesAliases[message.header.m]) {
+            if (noobyModulesAliases[message.header.m].receive) {
+                noobyModulesAliases[message.header.m].receive(environment, client, message)
             }
         } else {
             log("Unknown message type '" + message.header.m + "'")
@@ -77,6 +77,7 @@ let callbacks = {
 };
 
 noobyModules = {}
+noobyModulesAliases = {}
 
 //module data and helper functions
 let environment = {
@@ -99,12 +100,15 @@ require("fs").readdirSync("./nooby_modules").forEach(function (file) {
     if (file.indexOf(".js") !== -1) {
         file = file.replace(".js", "")
         console.log("[Module] load " + file)
-        noobyModules[file] = require("./nooby_modules/" + file + ".js");
+
+        let m = require("./nooby_modules/" + file + ".js");
+        noobyModules[file] = m
+        noobyModulesAliases[file] = m
 
         //register aliases
         noobyModules[file].aliases = noobyModules[file].aliases || []
         for (let i = 0; i < noobyModules[file].aliases.length; i++) {
-            noobyModules[noobyModules[file].aliases[i]] = noobyModules[file]
+            noobyModulesAliases[noobyModules[file].aliases[i]] = noobyModules[file]
         }
 
         //init

@@ -8,8 +8,7 @@ require("love.timer")
 
 local packer = require(dir .. "/messagePack")
 
-local socket = require("socket")
-local sock
+local socket
 
 local char = string.char
 local floor = math.floor
@@ -74,24 +73,16 @@ end
 local function connect()
 	--try to connect
 	local err
-	sock, err = socket.connect(server, port)
+	socket, err = require("socket").connect(server, port)
 	
 	--failed
-	if not sock then
+	if not socket then
 		return false
 	end
 	
 	--settings
-	sock:setoption("tcp-nodelay", true)
-	sock:settimeout(0)
-	
-	jobs = { }
-	packMessage({
-		m = "connect",
-		channel = settings.channel,
-		settings = settings.settings,
-		password = settings.password,
-	})
+	socket:setoption("tcp-nodelay", true)
+	socket:settimeout(0)
 	
 	--success
 	return true
@@ -177,7 +168,7 @@ while true do
 	if job then
 		if job == "disconnect" then
 			receiveChannel:push("disconnected")
-			sock:close()
+			socket:close()
 			return
 		else
 			packMessage(job[1], job[2])
@@ -189,14 +180,14 @@ while true do
 		local j = jobs[1]
 		
 		--try to send
-		local result, message, lastByte = sock:send(j[1], j[2])
+		local result, message, lastByte = socket:send(j[1], j[2])
 		
 		--not send, or only partially.
 		if (result == nil) then
-			--connection lost, try to reconnect
+			--connection lost
 			if message == "closed" then
 				receiveChannel:push("connection_lost")
-				sock:close()
+				socket:close()
 				return
 			else
 				j[2] = lastByte + 1
@@ -210,7 +201,7 @@ while true do
 	end
 	
 	--receive messages
-	local result, message, partial = sock:receive(1024 * 64)
+	local result, message, partial = socket:receive(1024 * 64)
 	if result then
 		buffer = buffer .. result
 		worked = true
@@ -251,6 +242,6 @@ while true do
 	
 	--sleep
 	if not worked then
-		love.timer.sleep(1 / 256)
+		love.timer.sleep(1 / 10000)
 	end
 end

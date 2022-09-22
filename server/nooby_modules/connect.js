@@ -6,13 +6,20 @@ let init = function (env) {
 let destroySocket = function (env, client) {
     //disconnect from channel
     if (client.channel) {
+        //notify other clients
         let channel = env.channels[client.channel]
         for (const receiver of channel.clients) {
             if (receiver.userId !== client.userId) env.socketWrapper.send(receiver, client, {m: "disconnected"})
         }
 
+        //remove from channel
         let i = channel.clients.indexOf(client)
         channel.clients.splice(i, 1)
+
+        //remove channel if it became empty
+        if (channel.clients.length === 0) {
+            delete env.channels[client.channel]
+        }
     }
 }
 
@@ -41,8 +48,9 @@ let receive = function (env, client, msg) {
     //create new channel if not existing
     if (env.channels[client.channel] == null) {
         env.channels[client.channel] = {
-            name: tags.admin && msg.header.name || client.channel,
-            description: tags.admin && msg.header.description || "",
+            name: client.channel,
+            description: "",
+            game: "unknown",
             password: null,
             visible: false,
             clients: [],
@@ -72,7 +80,6 @@ let receive = function (env, client, msg) {
 
     //apply initial settings
     if (msg.header.settings) {
-        console.log("dhfjk")
         env.noobyModules.settings.receive(env, client, msg)
     }
 

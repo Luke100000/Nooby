@@ -1,5 +1,8 @@
-local noobyA = require("nooby")("localhost", 25000, "benchmark")
-local noobyB = require("nooby")("localhost", 25000, "benchmark")
+local noobyA = require("nooby")("localhost", 25000)
+local noobyB = require("nooby")("localhost", 25000)
+
+noobyA:connect("benchmark")
+noobyB:connect("benchmark")
 
 --dump first package
 noobyB:demand()

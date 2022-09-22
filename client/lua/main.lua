@@ -17,8 +17,11 @@ local inspect = require("inspect")
 local log = { }
 local input = ""
 
---connect to a local nooby server to the global "testChannel"
-local nooby = require("nooby")("localhost", 25000, "testChannel")
+--connect to a local nooby server
+local nooby = require("nooby")("localhost", 25000)
+
+--connect to public channel
+nooby:connect("testChannel")
 
 --set tag "filter" to "test"
 nooby:send({ m = "tag", tag = "filter", value = "test" })

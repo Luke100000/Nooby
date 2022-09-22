@@ -8,7 +8,13 @@ let receive = function (env, client, msg) {
                 if (key === "password") {
                     channel.password = value
                 } else if (key === "visible") {
-                    channel.password = !!value
+                    channel.visible = !!value
+                } else if (key === "game") {
+                    channel.game = value
+                } else if (key === "description") {
+                    channel.description = value
+                } else if (key === "name") {
+                    channel.name = value
                 } else {
                     env.sendError(client, msg, "unknown key " + key.toString())
                 }

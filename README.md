@@ -36,7 +36,7 @@ Nooby comes with a few inbuilt modules. The header contains required fields.
   some bytes.
 * `u` the user the response originated from, might be the sender in case of errors or pings.
 
-## Connect
+## `connect`
 
 Connect to a channel, disconnects from the old one if already connected. If multiple channels are required, multiple
 connections should be opened instead.
@@ -59,7 +59,7 @@ Alias `c`
 
 * `channel` the channel name chosen when creating a new channel
 
-## Message
+## `message`
 
 Default module used to broadcast data to all clients, except the sender.
 
@@ -67,7 +67,7 @@ Alias `m`, `(default)`
 
 * `t` (optional) a dictionary of tags to be fulfilled
 
-## DirectMessage
+## `directMessage`
 
 Sends a message directly to a single client.
 
@@ -75,7 +75,7 @@ Alias `dm`
 
 * `u` the user ID to send to
 
-## Tag
+## `tag`
 
 Set tags for a single user.
 
@@ -87,15 +87,22 @@ Alias `t`
 * `tag` the tag identifier
 * `value` the tags value, or empty to unset
 
-## Ping
+## `ping`
 
 Pong. Sends back the payload.
 
+## `getChannels`
+
+Retrieves all current tags for a user.
+
+Required permission level 1.
+
 ### Response
 
-See (GetTags)[#GetTags].
+* `channels` a list of channels, each channel is a directory with `channel`, name, `description`, `password` (boolean),
+  and `clients` (# of connected clients)
 
-## GetTags
+## `getTags` WIP
 
 Retrieves all current tags for a user.
 
@@ -109,13 +116,13 @@ Required permission level 1.
 
 Client only response.
 
-## Error
+## `error`
 
 * `reason` the reason for the error
     * e.g. `permission denied`
 * `header` the header responsible for the error
 
-## Shutdown
+## `shutdown`
 
 Server has been shut down.
 
@@ -130,7 +137,7 @@ The Lua Client has been benchmarked local and on a test server with 30 ms ping a
 
 Tests were performed on packages and raw data with different sizes, with and without header.
 
--- todo
+`TODO`
 
 ## Local
 
@@ -138,38 +145,55 @@ Tests were performed on packages and raw data with different sizes, with and wit
 
 Located in `client/lua/`, with `nooby.lua`, `noobyThread` and `messagePack.lua` the required files.
 
+This is an example communication between a host creating a channel and a client sending its first message.
+
 ```lua
+io.stdout:setvbuf("no")
+local inspect = require("inspect")
+
 -- open connection, connect to channel
-local nooby = require("nooby")("localhost", 25000, "some global channel")
+local noobyHost = require("nooby")("localhost", 25000)
+
+-- connect to a new channel with (optional) password and channel settings (settings only work on new channels)
+noobyHost:connect(false, "password", {
+	visible = true,
+	password = "password",
+	game = "Your Game",
+	description = "Playing on map xyz!",
+})
 
 -- wait 3 seconds for channel join confirmation
-local header, payload = nooby:demand(3)
+local header, payload = noobyHost:demand(3)
 assert(header and header.m == "connected", "Hmm, connection failed")
+
+-- that's the hosts unique id and the new channels name! The channel name can also be retrieved by the getChannels module.
 local userId = header.u
+local channelName = header.channel
 
 -- setting some tags
-nooby:send({ m = "tag", tag = "filter", value = "test" })
+noobyHost:send({ m = "tag", tag = "filter", value = "test" })
+
+-- open a second connection for a client
+-- here I use a host-clients model, but a purely p2p model would also work
+local noobyClient = require("nooby")("localhost", 25000)
+noobyClient:connect(channelName, "password")
+
+-- wait 3 seconds for channel join confirmation
+local header, payload = noobyClient:demand(3)
+assert(header and header.m == "connected", "Hmm, connection failed (" .. inspect(header or payload) .. ")")
 
 -- sending a welcome message too everyone else, no header required
-nooby:send(false, { data = "Welcome!" })
+noobyClient:send({ t = { filter = "test" } }, { data = "Welcome!" })
 
--- awaiting other messages
+-- server loop, will print the clients welcome message
 while true do
-	local header, payload = nooby:receive()
+	local header, payload = noobyHost:demand()
 	if header then
 		-- incoming data
-		print(payload.data)
-		io.flush()
+		print(inspect(header), inspect(payload))
 	elseif header == false then
 		-- something went wrong, usually connection issues
 		print(payload)
-		io.flush()
-	else
-		-- nothing new
-		love.timer.sleep(1)
-		
-		-- send stuff to everyone with the same tags
-		nooby:send({ tags = { filter = "test" } }, { data = "Hey, I'm user " .. userId })
 	end
 end
 ```

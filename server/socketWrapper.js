@@ -123,7 +123,7 @@ class Wrapper {
     //destroys a socket and removes it from the client list
     destroySocket = function (client, info) {
         let i = this.clients.indexOf(client)
-        if (i != null) {
+        if (i >= 0) {
             this.clients.splice(i, 1)
             this.callbacks.destroySocket(client, info)
             client.end()
