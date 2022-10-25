@@ -36,6 +36,9 @@ verbose = function () {
     if (config.verbose) console.info.apply(console, arguments)
 }
 
+if (!fs.existsSync("./crashlogs/")) {
+    fs.mkdirSync("./crashlogs/");
+}
 
 //wrapper callbacks
 let callbacks = {
@@ -49,7 +52,16 @@ let callbacks = {
 
         if (noobyModulesAliases[message.header.m]) {
             if (noobyModulesAliases[message.header.m].receive) {
-                noobyModulesAliases[message.header.m].receive(environment, client, message)
+                try {
+                    noobyModulesAliases[message.header.m].receive(environment, client, message)
+                } catch (error) {
+                    console.log(error)
+                    let err = error.message
+                    if ("stack" in error) {
+                        err += "\n" + error.stack
+                    }
+                    fs.writeFileSync("./crashlogs/" + Date.now().toString() + ".txt", err);
+                }
             }
         } else {
             log("Unknown message type '" + message.header.m + "'")
@@ -82,6 +94,7 @@ noobyModulesAliases = {}
 //module data and helper functions
 let environment = {
     log: log,
+    stats: stats,
     Message: require('./socketWrapper.js').Message,
     socketWrapper: new (require('./socketWrapper.js').Wrapper)(config, callbacks),
     noobyModules: noobyModules,
