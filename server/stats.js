@@ -12,7 +12,7 @@ function getLogPath() {
 }
 
 function reset() {
-    json = JSON.parse('{"msgOut":0, "msgIn":0, "dataOut":0, "dataIn":0, "users":0}');
+    json = JSON.parse('{"outgoingMessages":0, "incomingMessages":0, "outgoingBytes":0, "incomingBytes":0, "newConnections":0}');
 }
 
 function load() {

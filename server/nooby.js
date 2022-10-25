@@ -45,8 +45,8 @@ let callbacks = {
     log: log,
 
     receive: function (client, message) {
-        stats.add("msgIn", 1)
-        stats.add("dataIn", 6 + message.headerSize + message.payloadSize)
+        stats.add("incomingMessages", 1)
+        stats.add("incomingBytes", 6 + message.headerSize + message.payloadSize)
 
         verbose("received", client.ID, message)
 
@@ -69,14 +69,14 @@ let callbacks = {
     },
 
     send: function (receiver, sender, message) {
-        stats.add("msgOut", 1)
-        stats.add("dataOut", message.headerSize + message.payloadSize)
+        stats.add("outgoingMessages", 1)
+        stats.add("outgoingBytes", message.headerSize + message.payloadSize)
 
         verbose("sent", receiver.ID + " to " + sender.ID, message)
     },
 
     newClient: function (client) {
-        stats.add("users", 1)
+        stats.add("newConnections", 1)
     },
 
     destroySocket: function (client, info) {

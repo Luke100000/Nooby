@@ -113,7 +113,13 @@ Required permission level 1.
 Retrieves the current networking stats.
 
 ```json
-
+{
+  "outgoingMessages": 0,
+  "incomingMessages": 0,
+  "outgoingBytes": 0,
+  "incomingBytes": 0,
+  "newConnections": 0
+}
 ```
 
 ### Response
