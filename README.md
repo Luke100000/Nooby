@@ -108,6 +108,14 @@ Retrieves all current tags for a user.
 
 Required permission level 1.
 
+## `getStats`
+
+Retrieves the current networking stats.
+
+```json
+
+```
+
 ### Response
 
 * `tags` the entire tag directory currently set.

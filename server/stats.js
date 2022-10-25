@@ -38,11 +38,16 @@ function add(typ, number) {
     json[typ] = json[typ] + number;
 }
 
+function getJson() {
+    return json
+}
+
 module.exports = {
     load,
     save,
     reset,
-    add
+    add,
+    getJson
 }
 
 function msToTime(ms) {
