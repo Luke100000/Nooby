@@ -230,6 +230,12 @@ noobyClient.send(header, data)    //send `header`, and `data`
 
 # Server
 
+Install `msgpack-js`:
+
+```
+sudo npm install msgpack-js
+```
+
 Start the server using nodejs.
 
 ```bash
