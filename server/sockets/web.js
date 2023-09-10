@@ -24,8 +24,21 @@ class SocketWeb {
 
             socket.type = "WebSocket"
 
-            socket.send = function (client, data) {      //data must be a buffer!
-                client.sendBytes(data)
+            socket.send = function(client, data) {      //data must be a buffer!
+                if(data instanceof Buffer){
+                    client.sendBytes(data)
+                }
+                else if(data instanceof Uint8Array){
+                    client.sendBytes(Buffer.from(data))
+                }
+                else{
+                    // The following code will result in an error when trying to send
+                    client.sendBytes(data)
+                }
+            }
+
+            socket.end = function(client){
+                // The socket will do that for us
             }
         });
 

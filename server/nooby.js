@@ -25,7 +25,7 @@ function checkAndInstall(moduleName, moduleVersion){
     const { execSync } = require('child_process');
     try{
         execSync(`npm ls ${moduleName}`);
-        // Module is installed
+        console.log(`Module installed: ${moduleName}@${moduleVersion}...`);
     }catch (error){
         console.log(`Installing ${moduleName}@${moduleVersion}...`);
         try{
