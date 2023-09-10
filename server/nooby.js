@@ -19,6 +19,27 @@
  *
  **/
 
+
+// check if node_modules are installed, and if not, install them
+function checkAndInstall(moduleName, moduleVersion){
+    const { execSync } = require('child_process');
+    try{
+        execSync(`npm ls ${moduleName}`);
+        // Module is installed
+    }catch (error){
+        console.log(`Installing ${moduleName}@${moduleVersion}...`);
+        try{
+            execSync(`npm install ${moduleName}@${moduleVersion}`);
+            console.log(`${moduleName}@${moduleVersion} has been installed.`);
+        }catch(error){
+            console.error(`Failed to install ${moduleName}@${moduleVersion}: ${error.message}`);
+        }
+    }
+}
+checkAndInstall('msgpack-js', '0.3.0')
+checkAndInstall('websocket',  '1.0.31')
+
+
 const fs = require('fs');
 
 stats = require("./stats.js");
