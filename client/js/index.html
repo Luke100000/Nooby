@@ -6,7 +6,6 @@
         <script src="lz4.min.js"></script>
         <script src="msgpack.min.js"></script>
         <script src="nooby.js"></script>
-        <script src="index.js"></script>
     </head>
     <body>
         <p>Open console for output and click inside the window</p>
@@ -17,4 +16,43 @@
 
         <p id="console">CONSOLE:<br></p>
     </body>
+
+    <script type="text/javascript">
+        let noobyClient = new NoobyClient();
+
+        let wrapper = {
+            onmessage: function (header, payload) {
+                console.log('HEADER', header.m, payload)
+                document.getElementById("console").innerHTML = header.m + ": " + JSON.stringify(header) + ": " + JSON.stringify(payload);
+            },
+            log: function () {
+                console.log(arguments[0])
+                //document.getElementById("console").innerHTML = arguments[0]
+            }
+        }
+
+        let testTypes = function () {
+            noobyClient.send({}, {data: "A message!"})
+        }
+
+        let testChannel = function () {
+            noobyClient.connect("testChannel")
+            noobyClient.send({}, {data: "Hello"})
+        }
+
+        let randomChannel = function () {
+            noobyClient.connect()
+        }
+
+        let test = function () {
+            let start = new Date().getTime()
+            for (let i = 0; i < 100; i++)
+                noobyClient.send({}, {data: "HellooooooooooooABC(" + i + ")"})
+            console.log("finished", (new Date().getTime() - start) + "ms")
+        }
+
+        window.onload = function () {
+            noobyClient.init(wrapper, "localhost", "25002");
+        }
+    </script>
 </html>
