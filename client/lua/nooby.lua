@@ -11,8 +11,10 @@ local defaultSettings = {
 ---@class Nooby
 ---@field server string
 ---@field port number
----@field private sendChannel love.Channel
----@field private receiveChannel love.Channel
+---@field private sendChannel love.Channel  | nil
+---@field private receiveChannel love.Channel | nil
+---@field private thread love.Thread | nil
+---@field settings table
 ---@field connected boolean True when the instance is currently connected to a channel
 local meta = {}
 
@@ -35,22 +37,24 @@ function meta:new(server, port, settings)
 		port = port,
 		settings = settings,
 
-		--Thread communication
-		sendChannel = love.thread.newChannel(),
-		receiveChannel = love.thread.newChannel(),
-
-		--Thread
-		thread = love.thread.newThread(dir .. "/noobyThread.lua"),
-
 		--Status
 		connected = false
 	}
 
-	--Start thread
-	instance.thread:start(dir, instance.sendChannel, instance.receiveChannel, instance.server, instance.port,
-		instance.settings)
-
 	return setmetatable(instance, { __index = meta })
+end
+
+---Launches the thread and establish a connection
+function meta:startThread()
+	-- Communication
+	self.sendChannel = love.thread.newChannel()
+	self.receiveChannel = love.thread.newChannel()
+
+	--Thread
+	self.thread = love.thread.newThread(dir .. "/noobyThread.lua")
+
+	--Start thread
+	self.thread:start(dir, self.sendChannel, self.receiveChannel, self.server, self.port, self.settings)
 end
 
 ---Connect to a channel
@@ -58,8 +62,11 @@ end
 ---@param password string | nil
 ---@param settings table | nil
 function meta:connect(channel, password, settings)
-	assert(not self.connected, "Do not connect twice, create a separate Nooby instance and disconnect this one.")
+	assert(not self.connected, "Already connected, disconnect first!")
 	self.connected = true
+
+	--Start the worker thread
+	self:startThread()
 
 	--If joining a new private channel (no channel name given), but a password, then lets set the password setting as well
 	if password and not channel then
@@ -79,15 +86,15 @@ end
 
 ---Sends a message with
 function meta:send(header, data)
+	assert(self.connected, "Not connected")
 	self.sendChannel:push({ header, data })
 end
 
----Disconnects from the channel
+---Close the instance and shuts down the thread
 function meta:disconnect()
+	assert(self.connected, "Not connected")
+	self.connected = false
 	self.sendChannel:push("disconnect")
-	self.__index = function()
-		error("connected closed")
-	end
 end
 
 ---Wait for a message with optional timeout
@@ -95,6 +102,8 @@ end
 ---@return boolean | nil
 ---@return table | nil
 function meta:demand(timeout)
+	assert(self.connected, "Not connected")
+
 	local msg
 	if not timeout or timeout > 0 then
 		msg = self.receiveChannel:demand(timeout)
