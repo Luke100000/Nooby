@@ -37,12 +37,22 @@ Alias `c`
 
 - `channel` (optional) the channel name to connect
 - `password` (optional) password if the channel is password protected
-- `settings` (optional) a table containing channel settings, only when creating a private channel ((
-  settings)[#settings])
+- `settings` (optional) a table containing channel settings, only when creating a private channel, see [settings](#settings)
 
 ### Response
 
 - `channel` the channel name chosen when creating a new channel
+
+## `settings`
+
+Changes channel settings on private channels.
+
+- `password` (optional) sets a new password
+- `visible` (optional) toggles visibility in the channel list, direct connects are still valid
+- `game` (optional) sets the game name to be filtered by in the channel list
+- `name` (optional) sets the name of the channel as it would appear in the channel list
+
+Requires permission level 1.
 
 ## `message`
 
@@ -80,7 +90,7 @@ Pong. Sends back the payload.
 
 Retrieves all current tags for a user.
 
-Required permission level 1.
+Requires permission level 1.
 
 ### Response
 
@@ -91,7 +101,7 @@ Required permission level 1.
 
 Retrieves all current tags for a user.
 
-Required permission level 1.
+Requires permission level 1.
 
 ## `getStats`
 
