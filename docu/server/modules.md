@@ -1,28 +1,25 @@
-### Table of contents
+# Table of contents
+
 [home](/README.md)
+
 - server
-  - [requirements](/docu/server/requirements.md)
   - [installation](/docu/server/installation.md)
-  - [settings](/docu/server/settings.md)
   - [benchmark](/docu/server/benchmark.md)
   - [modules](/docu/server/modules.md)
-  - [packageFormat](/docu/server/packageFormat.md)
+  - [specification](/docu/server/specification.md)
 - client
-  - lua
-    - [Client Lua Installation](/docu/client/lua/installation.md)
-    - [Client Lua Usage](/docu/client/lua/usage.md)
+  - [Lua Client](/docu/client/lua/usage.md)
   - javascript
     - [Client Javascript Installation](/docu/client/js/installation.md)
     - [Client Javascript Usage](/docu/client/js/usage.md)
 
-
-# server/modules
+# Modules
 
 Nooby comes with a few inbuilt modules. The header contains required fields.
 
-* `m` the module responsible for processing, or the type of answer. Default is `message`. May also be an alias to save
+- `m` the module responsible for processing, or the type of answer. Default is `message`. May also be an alias to save
   some bytes.
-* `u` the user the response originated from, might be the sender in case of errors or pings.
+- `u` the user the response originated from, might be the sender in case of errors or pings.
 
 ## `connect`
 
@@ -38,14 +35,14 @@ Public channels are meant to be used for lobbies or global chats. Nobody can cha
 
 Alias `c`
 
-* `channel` (optional) the channel name to connect
-* `password` (optional) password if the channel is password protected
-* `settings` (optional) a table containing channel settings, only when creating a private channel ((
+- `channel` (optional) the channel name to connect
+- `password` (optional) password if the channel is password protected
+- `settings` (optional) a table containing channel settings, only when creating a private channel ((
   settings)[#settings])
 
 ### Response
 
-* `channel` the channel name chosen when creating a new channel
+- `channel` the channel name chosen when creating a new channel
 
 ## `message`
 
@@ -53,7 +50,7 @@ Default module used to broadcast data to all clients, except the sender.
 
 Alias `m`, `(default)`
 
-* `t` (optional) a dictionary of tags to be fulfilled
+- `t` (optional) a dictionary of tags to be fulfilled
 
 ## `directMessage`
 
@@ -61,7 +58,7 @@ Sends a message directly to a single client.
 
 Alias `dm`
 
-* `u` the user ID to send to
+- `u` the user ID to send to
 
 ## `tag`
 
@@ -71,9 +68,9 @@ Required permission level 1, or 2 when specifying a specific user.
 
 Alias `t`
 
-* `u` the user to set the tags for, or empty to set on yourself.
-* `tag` the tag identifier
-* `value` the tags value, or empty to unset
+- `u` the user to set the tags for, or empty to set on yourself.
+- `tag` the tag identifier
+- `value` the tags value, or empty to unset
 
 ## `ping`
 
@@ -87,7 +84,7 @@ Required permission level 1.
 
 ### Response
 
-* `channels` a list of channels, each channel is a directory with `channel`, name, `description`, `password` (boolean),
+- `channels` a list of channels, each channel is a directory with `channel`, name, `description`, `password` (boolean),
   and `clients` (# of connected clients)
 
 ## `getTags` WIP
@@ -112,8 +109,7 @@ Retrieves the current networking stats.
 
 ### Response
 
-* `tags` the entire tag directory currently set.
-
+- `tags` the entire tag directory currently set.
 
 ## Own Modules
 
@@ -122,19 +118,37 @@ In aliases, you can define alternative, shorter identifiers, but make sure to av
 
 ```js
 let init = function (env) {
-    // populate the environment at server load with module specific variables
-}
+  // populate the environment at server load with module specific variables
+};
 
 let receive = function (env, client, msg) {
-    // messages received from client
-}
+  // messages received from client
+};
 
 // the (short) name of the module as specified in a packets header
-let aliases = ["mm"]
+let aliases = ["mm"];
 
 module.exports = {
-    init,
-    receive,
-    aliases,
-}
+  init,
+  receive,
+  aliases,
+};
 ```
+
+# Additional Responses
+
+Additional responses the server may send to clients.
+
+## `error`
+
+- `reason` the reason for the error
+  - e.g. `permission denied`
+- `header` the header responsible for the error
+
+## `shutdown`
+
+Server has been shut down.
+
+# Permissions
+
+Some modules require a permission level. Having the `admin` tag grants level 2, being on a public server grants level 1, everyone else has level 0. Requesting a module with insufficient permission results in an `error` response.
