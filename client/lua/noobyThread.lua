@@ -17,7 +17,7 @@ local floor = math.floor
 local compressionThreshold = 64
 
 --packets waiting to be sent
-local jobs = { }
+local jobs = {}
 
 local function packShort(i)
 	return char(floor(i / 256), i % 256)
@@ -34,12 +34,13 @@ local function packMessage(header, payload)
 	if payload then
 		--pack
 		payload = packer.pack(payload)
-		
+
 		--compress
 		local rawLength = #payload
 		if rawLength > compressionThreshold and compressionID > 0 then
-			payload = char(compressionID) .. love.data.compress("string", settings.compression, payload, settings.compressionLevel)
-			
+			payload = char(compressionID) ..
+			love.data.compress("string", settings.compression, payload, settings.compressionLevel)
+
 			--auto adjust threshold
 			if #payload > rawLength then
 				compressionThreshold = compressionThreshold + 1
@@ -50,10 +51,10 @@ local function packMessage(header, payload)
 			payload = char(0) .. payload
 		end
 	end
-	
+
 	--header segment
 	local packedHeader = header and packer.pack(header)
-	
+
 	--pack
 	local packet
 	if payload and packedHeader then
@@ -65,7 +66,7 @@ local function packMessage(header, payload)
 	else
 		packet = ZERO_SHORT .. ZERO_INTEGER
 	end
-	
+
 	--push to jobs
 	table.insert(jobs, { packet })
 end
@@ -74,16 +75,16 @@ local function connect()
 	--try to connect
 	local err
 	socket, err = require("socket").connect(server, port)
-	
+
 	--failed
 	if not socket then
 		return false
 	end
-	
+
 	--settings
 	socket:setoption("tcp-nodelay", true)
 	socket:settimeout(0)
-	
+
 	--success
 	return true
 end
@@ -95,45 +96,45 @@ if not connect() then
 end
 
 --receiver channels
-local buffers = { }
-local statuses = { }
+local buffers = {}
+local statuses = {}
 local function receive(user)
 	--start new message
 	if not statuses[user] and #buffers[user] >= 6 then
 		local b1, b2, b3, b4, b5, b6 = buffers[user]:byte(1, 6)
 		local headerSize = b1 * 256 + b2
 		local payloadSize = b3 * 256 ^ 3 + b4 * 256 ^ 2 + b5 * 256 + b6
-		
+
 		statuses[user] = {
 			headerSize = headerSize,
 			payloadSize = payloadSize,
 			header = { u = user, m = "message" },
-			payload = { },
+			payload = {},
 			state = headerSize > 0 and "header" or payloadSize > 0 and "payload" or "done"
 		}
-		
+
 		buffers[user] = buffers[user]:sub(7)
 	end
-	
+
 	--header
 	if statuses[user] and statuses[user].state == "header" and #buffers[user] >= statuses[user].headerSize then
 		statuses[user].header = packer.unpack(buffers[user]:sub(1, statuses[user].headerSize))
 		statuses[user].header.m = statuses[user].header.m or "message"
 		statuses[user].header.u = user
-		
+
 		buffers[user] = buffers[user]:sub(statuses[user].headerSize + 1)
-		
+
 		if statuses[user].payloadSize == 0 then
 			statuses[user].state = "done"
 		else
 			statuses[user].state = "payload"
 		end
 	end
-	
+
 	--payload
 	if statuses[user] and statuses[user].state == "payload" and #buffers[user] >= statuses[user].payloadSize then
 		local payload = buffers[user]:sub(1, statuses[user].payloadSize)
-		
+
 		--decompress
 		local compressionByte = payload:byte(1, 1)
 		if compressionByte == 0 then
@@ -143,13 +144,13 @@ local function receive(user)
 		else
 			payload = packer.unpack(love.data.decompress("string", "zlib", payload:sub(2)))
 		end
-		
+
 		buffers[user] = buffers[user]:sub(statuses[user].payloadSize + 1)
-		
+
 		statuses[user].payload = payload
 		statuses[user].state = "done"
 	end
-	
+
 	--done
 	if statuses[user] and statuses[user].state == "done" then
 		receiveChannel:push({ statuses[user].header, statuses[user].payload })
@@ -159,10 +160,11 @@ end
 
 --work
 local buffer = ""
+---@type boolean | table
 local currentChunk = false
 while true do
 	local worked = false
-	
+
 	--receive send jobs
 	local job = sendChannel:pop()
 	if job then
@@ -174,14 +176,14 @@ while true do
 			packMessage(job[1], job[2])
 		end
 	end
-	
+
 	--send as many messages as possible
 	while jobs[1] do
 		local j = jobs[1]
-		
+
 		--try to send
 		local result, message, lastByte = socket:send(j[1], j[2])
-		
+
 		--not send, or only partially.
 		if (result == nil) then
 			--connection lost
@@ -192,14 +194,14 @@ while true do
 			else
 				j[2] = lastByte + 1
 			end
-			
+
 			break
 		end
-		
+
 		worked = true
 		table.remove(jobs, 1)
 	end
-	
+
 	--receive messages
 	local result, message, partial = socket:receive(1024 * 64)
 	if result then
@@ -213,7 +215,7 @@ while true do
 			worked = true
 		end
 	end
-	
+
 	--receive chunks
 	while true do
 		if currentChunk then
@@ -221,7 +223,7 @@ while true do
 				buffers[currentChunk[1]] = (buffers[currentChunk[1]] or "") .. buffer:sub(1, currentChunk[2])
 				buffer = buffer:sub(currentChunk[2] + 1)
 				receive(currentChunk[1])
-				currentChunk = nil
+				currentChunk = false
 				worked = true
 			else
 				break
@@ -239,7 +241,7 @@ while true do
 			end
 		end
 	end
-	
+
 	--sleep
 	if not worked then
 		love.timer.sleep(1 / 10000)
