@@ -1,7 +1,7 @@
 local dir = (...):match("(.*/)") or ""
 
 ---@class NoobySettings
----@field compression "lz4" | "zlib" | "gzip"
+---@field compression "none" | "lz4" | "zlib" | "gzip"
 ---@field compressionLevel number
 local defaultSettings = {
 	compression = "lz4",
@@ -25,28 +25,28 @@ function meta:new(server, port, settings)
 	assert(server, "Address required")
 	assert(port, "Port required")
 
-	-- default settings
+	--Default settings
 	settings = setmetatable(settings or {}, { __index = defaultSettings })
 
 	---@type Nooby
 	local instance = {
-		--settings
+		--Settings
 		server = server,
 		port = port,
 		settings = settings,
 
-		--thread communication
+		--Thread communication
 		sendChannel = love.thread.newChannel(),
 		receiveChannel = love.thread.newChannel(),
 
-		--thread
+		--Thread
 		thread = love.thread.newThread(dir .. "/noobyThread.lua"),
 
-		--status
+		--Status
 		connected = false
 	}
 
-	--start thread
+	--Start thread
 	instance.thread:start(dir, instance.sendChannel, instance.receiveChannel, instance.server, instance.port,
 		instance.settings)
 
@@ -61,6 +61,7 @@ function meta:connect(channel, password, settings)
 	assert(not self.connected, "Do not connect twice, create a separate Nooby instance and disconnect this one.")
 	self.connected = true
 
+	--If joining a new private channel (no channel name given), but a password, then lets set the password setting as well
 	if password and not channel then
 		settings = settings or {}
 		settings.password = settings.password or password
@@ -76,7 +77,7 @@ function meta:connect(channel, password, settings)
 	})
 end
 
----Sends a message with 
+---Sends a message with
 function meta:send(header, data)
 	self.sendChannel:push({ header, data })
 end

@@ -15,7 +15,7 @@
 
 # Lua
 
-Located in `client/lua/`, with `nooby.lua`, `noobyThread` and `messagePack.lua` the required files.
+Located in `client/lua/`, with `nooby.lua`, `noobyThread.lua` and `messagePack.lua` the required files.
 
 This is an example communication between a host creating a channel and a client sending its first message.
 
@@ -46,7 +46,7 @@ local channelName = header.channel
 noobyHost:send({ m = "tag", tag = "filter", value = "test" })
 
 -- open a second connection for a client
--- here I use a host-clients model, but a purely p2p model would also work
+-- notice that there is no difference between hosts or clients, the term host only indicates who originally opened the channel
 local noobyClient = require("nooby")("localhost", 25000)
 noobyClient:connect(channelName, "password")
 

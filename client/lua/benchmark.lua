@@ -10,7 +10,7 @@ noobyB:demand()
 noobyB:send({ m = "tag", tag = "filterA", value = "testA" })
 noobyB:send({ m = "tag", tag = "filterB", value = "testB" })
 
-local testSizes = { }
+local testSizes = {}
 for i = 1, 10 do
 	table.insert(testSizes, 4 ^ i)
 end
@@ -19,7 +19,7 @@ local timePerTest = 10
 
 local function getTestBlock(n)
 	local input = {}
-	for i = 1, n do
+	for _ = 1, n do
 		table.insert(input, string.char(math.random(0, 255)))
 	end
 	return table.concat(input)
@@ -30,27 +30,31 @@ local function poll()
 		love.event.pump()
 		for name, a, b, c, d, e, f in love.event.poll() do
 			if name == "quit" then
+				---@diagnostic disable-next-line: undefined-field
 				if not love.quit or not love.quit() then
 					return a or 0
 				end
 			end
+			---@diagnostic disable-next-line: undefined-field
 			love.handlers[name](a, b, c, d, e, f)
 		end
 	end
 end
 
 --ping
+print()
+print("Testing Ping")
 print("| Payload | Mean | Std |")
 print("|---|---|---|")
 for _, chunkSize in ipairs(testSizes) do
 	local input = getTestBlock(chunkSize)
-	
+
 	--clear any pending messages
 	while noobyB:demand(0.25) do end
-	
+
 	local init = love.timer.getTime()
-	
-	local times = { }
+
+	local times = {}
 	while love.timer.getTime() - init < timePerTest do
 		local c = love.timer.getTime()
 		noobyA:send({ t = { filterA = "testA", filterB = "testB" } }, input)
@@ -59,28 +63,33 @@ for _, chunkSize in ipairs(testSizes) do
 		end
 		table.insert(times, love.timer.getTime() - c)
 	end
-	
+
 	local mean = 0
-	for i, v in ipairs(times) do
+	for _, v in ipairs(times) do
 		mean = mean + v
 	end
 	mean = mean / #times
 	local variance = 0
-	for i, v in ipairs(times) do
+	for _, v in ipairs(times) do
 		variance = variance + (v - mean) ^ 2
 	end
 	variance = variance / #times
-	print(string.format("| %d bytes | %.1f ms | %.1f ms |", chunkSize, mean * 1000, math.sqrt(variance) * 1000))
+	print(string.format("| %d bytes | %.2f ms | %.2f ms |", chunkSize, mean * 1000, math.sqrt(variance) * 1000))
 	io.flush()
 end
 
-local function test(packets, chunkSize, header)
-	local input = getTestBlock(chunkSize)
-	
+---Send and receive packets and return the time required to transfer all of them
+---@param packets number
+---@param payloadSize number The size of the payload in bytes
+---@param header boolean Include a test header
+---@return number
+local function getDelta(packets, payloadSize, header)
+	local input = getTestBlock(payloadSize)
+
 	local c = love.timer.getTime()
 	local sent = 0
 	local received = 0
-	
+
 	while sent < packets or received < packets do
 		if sent < packets then
 			if header then
@@ -90,7 +99,7 @@ local function test(packets, chunkSize, header)
 			end
 			sent = sent + 1
 		end
-		
+
 		if received < packets then
 			local header, payload = noobyB:receive()
 			if header then
@@ -99,10 +108,10 @@ local function test(packets, chunkSize, header)
 				error(payload)
 			end
 		end
-		
+
 		poll()
 	end
-	
+
 	return love.timer.getTime() - c
 end
 
@@ -112,13 +121,15 @@ local function printStats(packets, chunkSize, time)
 end
 
 for _, header in ipairs({ false, true }) do
+	print()
+	print("Testing Bandwidth " .. (header and "with header" or "without header"))
 	print("| Payload | Packets/s | MB/s |")
 	print("|---|---|---|")
 	for _, chunkSize in ipairs(testSizes) do
 		local packets = 1
 		local time
 		while true do
-			time = test(packets, chunkSize, header)
+			time = getDelta(packets, chunkSize, header)
 			if time < timePerTest then
 				packets = packets * 2
 			else

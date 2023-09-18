@@ -1,6 +1,6 @@
 local dir, sendChannel, receiveChannel, server, port, settings = unpack({ ... })
 
-local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or 0
+local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or settings.compression == "gzip" and 3 or 0
 
 require("love.thread")
 require("love.data")
