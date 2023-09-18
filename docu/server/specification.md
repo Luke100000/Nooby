@@ -17,12 +17,12 @@
 
 This section is only relevant when writing an own client and describes the binary representation of a packet.
 
-Data is transmitted from server to client in chunks, no bigger than `256^2` bytes:
+Data is transmitted from _server to client_ in chunks, no bigger than `256^2` bytes:
 
 - `{userId}{chunkSize}{chunk}`
   Messages from different users may interleave, therefore every user needs to concat chunks in its own buffer.
 
-Data is directly transmitted from client to server as data can not interleave.
+When data is sent from _client to server_, no chunking is performed as packets will never interleave.
 
 One or more chunks may form a message:
 

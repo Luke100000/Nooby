@@ -4,7 +4,7 @@ local dir = (...):match("(.*/)") or ""
 ---@field compression "none" | "lz4" | "zlib" | "gzip"
 ---@field compressionLevel number
 local defaultSettings = {
-	compression = "lz4",
+	compression = "none",
 	compressionLevel = -1,
 }
 

@@ -11,7 +11,7 @@ noobyB:send({ m = "tag", tag = "filterA", value = "testA" })
 noobyB:send({ m = "tag", tag = "filterB", value = "testB" })
 
 local testSizes = {}
-for i = 1, 10 do
+for i = 1, 8 do
 	table.insert(testSizes, 4 ^ i)
 end
 

@@ -1,10 +1,14 @@
 local dir, sendChannel, receiveChannel, server, port, settings = unpack({ ... })
 
-local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or settings.compression == "gzip" and 3 or 0
+--the byte used to indicate the type of compression
+local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or
+	settings.compression == "gzip" and 3 or 0
 
 require("love.thread")
 require("love.data")
 require("love.timer")
+
+local buffer = require("string.buffer")
 
 local packer = require(dir .. "/messagePack")
 
@@ -39,7 +43,7 @@ local function packMessage(header, payload)
 		local rawLength = #payload
 		if rawLength > compressionThreshold and compressionID > 0 then
 			payload = char(compressionID) ..
-			love.data.compress("string", settings.compression, payload, settings.compressionLevel)
+				love.data.compress("string", settings.compression, payload, settings.compressionLevel)
 
 			--auto adjust threshold
 			if #payload > rawLength then
@@ -101,7 +105,7 @@ local statuses = {}
 local function receive(user)
 	--start new message
 	if not statuses[user] and #buffers[user] >= 6 then
-		local b1, b2, b3, b4, b5, b6 = buffers[user]:byte(1, 6)
+		local b1, b2, b3, b4, b5, b6 = buffers[user]:get(6):byte(1, 6)
 		local headerSize = b1 * 256 + b2
 		local payloadSize = b3 * 256 ^ 3 + b4 * 256 ^ 2 + b5 * 256 + b6
 
@@ -112,17 +116,13 @@ local function receive(user)
 			payload = {},
 			state = headerSize > 0 and "header" or payloadSize > 0 and "payload" or "done"
 		}
-
-		buffers[user] = buffers[user]:sub(7)
 	end
 
 	--header
 	if statuses[user] and statuses[user].state == "header" and #buffers[user] >= statuses[user].headerSize then
-		statuses[user].header = packer.unpack(buffers[user]:sub(1, statuses[user].headerSize))
+		statuses[user].header = packer.unpack(buffers[user]:get(statuses[user].headerSize))
 		statuses[user].header.m = statuses[user].header.m or "message"
 		statuses[user].header.u = user
-
-		buffers[user] = buffers[user]:sub(statuses[user].headerSize + 1)
 
 		if statuses[user].payloadSize == 0 then
 			statuses[user].state = "done"
@@ -133,19 +133,21 @@ local function receive(user)
 
 	--payload
 	if statuses[user] and statuses[user].state == "payload" and #buffers[user] >= statuses[user].payloadSize then
-		local payload = buffers[user]:sub(1, statuses[user].payloadSize)
+		local compressionByte, payload = buffers[user]:get(1, statuses[user].payloadSize)
+
+		compressionByte = compressionByte:byte()
 
 		--decompress
-		local compressionByte = payload:byte(1, 1)
 		if compressionByte == 0 then
-			payload = packer.unpack(payload:sub(2))
+			payload = packer.unpack(payload)
 		elseif compressionByte == 1 then
-			payload = packer.unpack(love.data.decompress("string", "lz4", payload:sub(2)))
-		else
-			payload = packer.unpack(love.data.decompress("string", "zlib", payload:sub(2)))
+			payload = packer.unpack(love.data.decompress("string", "lz4", payload))
+		elseif compressionByte == 2 then
+			payload = packer.unpack(love.data.decompress("string", "zlib", payload))
+		elseif compressionByte == 3 then
+			payload = packer.unpack(love.data.decompress("string", "gzip", payload))
 		end
 
-		buffers[user] = buffers[user]:sub(statuses[user].payloadSize + 1)
 
 		statuses[user].payload = payload
 		statuses[user].state = "done"
@@ -158,8 +160,8 @@ local function receive(user)
 	end
 end
 
---work
-local buffer = ""
+--work and primary receive buffer
+local receiveBuffer = buffer.new()
 ---@type boolean | table
 local currentChunk = false
 while true do
@@ -205,13 +207,13 @@ while true do
 	--receive messages
 	local result, message, partial = socket:receive(1024 * 64)
 	if result then
-		buffer = buffer .. result
+		receiveBuffer:put(result)
 		worked = true
 	else
 		if message == "closed" then
 			return
 		elseif partial and #partial > 0 then
-			buffer = buffer .. partial
+			receiveBuffer:put(partial)
 			worked = true
 		end
 	end
@@ -219,9 +221,12 @@ while true do
 	--receive chunks
 	while true do
 		if currentChunk then
-			if #buffer >= currentChunk[2] then
-				buffers[currentChunk[1]] = (buffers[currentChunk[1]] or "") .. buffer:sub(1, currentChunk[2])
-				buffer = buffer:sub(currentChunk[2] + 1)
+			if #receiveBuffer >= currentChunk[2] then
+				local chunk = receiveBuffer:get(currentChunk[2])
+				if not buffers[currentChunk[1]] then
+					buffers[currentChunk[1]] = buffer.new()
+				end
+				buffers[currentChunk[1]]:put(chunk)
 				receive(currentChunk[1])
 				currentChunk = false
 				worked = true
@@ -229,12 +234,11 @@ while true do
 				break
 			end
 		else
-			if #buffer >= 4 then
-				local b1, b2, b3, b4 = buffer:byte(1, 4)
+			if #receiveBuffer >= 4 then
+				local b1, b2, b3, b4 = receiveBuffer:get(4):byte(1, 4)
 				local user = b1 * 256 + b2
 				local length = b3 * 256 + b4 + 1
 				currentChunk = { user, length }
-				buffer = buffer:sub(5)
 				worked = true
 			else
 				break
