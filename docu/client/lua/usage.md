@@ -20,7 +20,6 @@ Located in `client/lua/`, with `nooby.lua`, `noobyThread.lua` and `messagePack.l
 This is an example communication between a host creating a channel and a client sending its first message.
 
 ```lua
-io.stdout:setvbuf("no")
 local inspect = require("inspect")
 
 -- open connection, connect to channel
@@ -69,3 +68,15 @@ while true do
 	end
 end
 ```
+
+## Custom encoder
+
+By default the `string.buffer` encoder from LuaJIT is used to en- and decode payloads, which is by far the fastest serializer available.
+
+You may want to use the bundled MessagePack library, which is also used for the header data instead for a platform independend solution:
+
+```lua
+nooby:setEncoderDecoder(nooby.messagePackEncoder, nooby.messagePackDecoder)
+```
+
+Or implement and provide a custom one, mapping a `table` to a `string` and vice versa.

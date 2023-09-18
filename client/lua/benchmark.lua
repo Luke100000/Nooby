@@ -10,19 +10,32 @@ noobyB:demand()
 noobyB:send({ m = "tag", tag = "filterA", value = "testA" })
 noobyB:send({ m = "tag", tag = "filterB", value = "testB" })
 
+local packer = require("messagePack")
+
 local testSizes = {}
 for i = 1, 8 do
-	table.insert(testSizes, 4 ^ i)
+	table.insert(testSizes, 4 ^ (i - 1))
 end
 
 local timePerTest = 10
 
 local function getTestBlock(n)
 	local input = {}
-	for _ = 1, n do
-		table.insert(input, string.char(math.random(0, 255)))
+
+	local children = math.floor(n / 100)
+	while n > 0 do
+		n = n - 1 - children
+
+		table.insert(input, {
+			key = "value",
+			health = math.random(),
+			x = math.random(),
+			y = math.random(),
+			list = { math.random(100), math.random(100) },
+			child = children > 1 and getTestBlock(children) or false
+		})
 	end
-	return table.concat(input)
+	return input
 end
 
 local function poll()
@@ -46,8 +59,9 @@ print()
 print("Testing Ping")
 print("| Payload | Mean | Std |")
 print("|---|---|---|")
-for _, chunkSize in ipairs(testSizes) do
-	local input = getTestBlock(chunkSize)
+for _, testSize in ipairs(testSizes) do
+	local input = getTestBlock(testSize)
+	local bytes = #packer.pack(input)
 
 	--clear any pending messages
 	while noobyB:demand(0.25) do end
@@ -74,7 +88,7 @@ for _, chunkSize in ipairs(testSizes) do
 		variance = variance + (v - mean) ^ 2
 	end
 	variance = variance / #times
-	print(string.format("| %d bytes | %.2f ms | %.2f ms |", chunkSize, mean * 1000, math.sqrt(variance) * 1000))
+	print(string.format("| %d bytes | %.2f ms | %.2f ms |", bytes, mean * 1000, math.sqrt(variance) * 1000))
 	io.flush()
 end
 
@@ -83,8 +97,10 @@ end
 ---@param payloadSize number The size of the payload in bytes
 ---@param header boolean Include a test header
 ---@return number
+---@return number
 local function getDelta(packets, payloadSize, header)
 	local input = getTestBlock(payloadSize)
+	local bytes = #packer.pack(input)
 
 	local c = love.timer.getTime()
 	local sent = 0
@@ -112,11 +128,11 @@ local function getDelta(packets, payloadSize, header)
 		poll()
 	end
 
-	return love.timer.getTime() - c
+	return love.timer.getTime() - c, bytes
 end
 
-local function printStats(packets, chunkSize, time)
-	print(string.format("| %d bytes | %.1f | %.1f |", chunkSize, packets / time, packets * chunkSize / time / 1024 ^ 2))
+local function printStats(packets, payloadSize, time)
+	print(string.format("| %d bytes | %.1f | %.1f |", payloadSize, packets / time, packets * payloadSize / time / 1024 ^ 2))
 	io.flush()
 end
 
@@ -125,17 +141,17 @@ for _, header in ipairs({ false, true }) do
 	print("Testing Bandwidth " .. (header and "with header" or "without header"))
 	print("| Payload | Packets/s | MB/s |")
 	print("|---|---|---|")
-	for _, chunkSize in ipairs(testSizes) do
+	for _, testSize in ipairs(testSizes) do
 		local packets = 1
-		local time
+		local time, bytes
 		while true do
-			time = getDelta(packets, chunkSize, header)
+			time, bytes = getDelta(packets, testSize, header)
 			if time < timePerTest then
 				packets = packets * 2
 			else
 				break
 			end
 		end
-		printStats(packets, chunkSize, time)
+		printStats(packets, bytes, time)
 	end
 end

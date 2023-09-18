@@ -3,6 +3,7 @@ local dir, sendChannel, receiveChannel, server, port, settings = unpack({ ... })
 --the byte used to indicate the type of compression
 local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or
 	settings.compression == "gzip" and 3 or 0
+local compressionIDChar = string.char(compressionID)
 
 require("love.thread")
 require("love.data")
@@ -32,17 +33,15 @@ end
 
 local ZERO_INTEGER = char(0, 0, 0, 0)
 local ZERO_SHORT = char(0, 0)
+local ZERO_CHAR = char(0)
 
 --pack a message
 local function packMessage(header, payload)
 	if payload then
-		--pack
-		payload = packer.pack(payload)
-
 		--compress
 		local rawLength = #payload
-		if rawLength > compressionThreshold and compressionID > 0 then
-			payload = char(compressionID) ..
+		if rawLength > 0 and compressionID > 0 then
+			payload = compressionIDChar ..
 				love.data.compress("string", settings.compression, payload, settings.compressionLevel)
 
 			--auto adjust threshold
@@ -52,7 +51,7 @@ local function packMessage(header, payload)
 				compressionThreshold = compressionThreshold - 0.1
 			end
 		else
-			payload = char(0) .. payload
+			payload = ZERO_CHAR .. payload
 		end
 	end
 
@@ -113,7 +112,7 @@ local function receive(user)
 			headerSize = headerSize,
 			payloadSize = payloadSize,
 			header = { u = user, m = "message" },
-			payload = {},
+			payload = false,
 			state = headerSize > 0 and "header" or payloadSize > 0 and "payload" or "done"
 		}
 	end
@@ -138,16 +137,13 @@ local function receive(user)
 		compressionByte = compressionByte:byte()
 
 		--decompress
-		if compressionByte == 0 then
-			payload = packer.unpack(payload)
-		elseif compressionByte == 1 then
-			payload = packer.unpack(love.data.decompress("string", "lz4", payload))
+		if compressionByte == 1 then
+			payload = love.data.decompress("string", "lz4", payload)
 		elseif compressionByte == 2 then
-			payload = packer.unpack(love.data.decompress("string", "zlib", payload))
+			payload = love.data.decompress("string", "zlib", payload)
 		elseif compressionByte == 3 then
-			payload = packer.unpack(love.data.decompress("string", "gzip", payload))
+			payload = love.data.decompress("string", "gzip", payload)
 		end
-
 
 		statuses[user].payload = payload
 		statuses[user].state = "done"

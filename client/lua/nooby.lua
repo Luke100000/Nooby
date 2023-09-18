@@ -1,22 +1,61 @@
 local dir = (...):match("(.*/)") or ""
 
+local packer = require(dir .. "/messagePack")
+local buffer = require("string.buffer")
+
 ---@class NoobySettings
 ---@field compression "none" | "lz4" | "zlib" | "gzip"
 ---@field compressionLevel number
 local defaultSettings = {
-	compression = "none",
+	compression = "lz4",
 	compressionLevel = -1,
 }
 
 ---@class Nooby
 ---@field server string
 ---@field port number
----@field private sendChannel love.Channel  | nil
+---@field private sendChannel love.Channel | nil
 ---@field private receiveChannel love.Channel | nil
 ---@field private thread love.Thread | nil
 ---@field settings table
 ---@field connected boolean True when the instance is currently connected to a channel
+---@field encoder fun(table): string
+---@field decoder fun(string): table
 local meta = {}
+
+
+---Sets the en- and decoder
+---@param encoder fun(table): string
+---@param decoder fun(string): table
+function meta:setEncoderDecoder(encoder, decoder)
+	self.encoder = encoder
+	self.decoder = decoder
+end
+
+---@param data table
+---@return string
+function meta.defaultEncoder(data)
+	return buffer.encode(data)
+end
+
+---@param data string
+---@return table
+function meta.defaultDecoder(data)
+	---@diagnostic disable-next-line: return-type-mismatch
+	return buffer.decode(data)
+end
+
+---@param data table
+---@return string
+function meta.messagePackEncoder(data)
+	return packer.pack(data)
+end
+
+---@param data string
+---@return table
+function meta.messagePackDecoder(data)
+	return packer.unpack(data)
+end
 
 ---Creates a new Nooby connection instance
 ---@param server string
@@ -38,7 +77,10 @@ function meta:new(server, port, settings)
 		settings = settings,
 
 		--Status
-		connected = false
+		connected = false,
+
+		encoder = meta.defaultEncoder,
+		decoder = meta.defaultDecoder,
 	}
 
 	return setmetatable(instance, { __index = meta })
@@ -85,9 +127,14 @@ function meta:connect(channel, password, settings)
 end
 
 ---Sends a message with
-function meta:send(header, data)
+---@param header table | nil
+---@param payload any
+function meta:send(header, payload)
 	assert(self.connected, "Not connected")
-	self.sendChannel:push({ header, data })
+	if payload then
+		payload = self.encoder(payload)
+	end
+	self.sendChannel:push({ header, payload })
 end
 
 ---Close the instance and shuts down the thread
@@ -114,7 +161,7 @@ function meta:demand(timeout)
 	if type(msg) == "string" then
 		return false, msg
 	elseif msg then
-		return msg[1], msg[2]
+		return msg[1], msg[2] and self.decoder(msg[2]) or nil
 	else
 		return nil, nil
 	end
