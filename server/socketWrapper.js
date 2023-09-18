@@ -45,6 +45,15 @@ class Wrapper {
     }
 
     receive = function (client, data) {
+		try {
+			this.receiveInner(client, data)
+		} catch (error) {
+			console.log(error)
+			this.destroySocket(client, "error")
+		}
+	}
+
+    receiveInner = function (client, data) {
         let self = this
 
         //append data
