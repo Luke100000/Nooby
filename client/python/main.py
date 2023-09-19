@@ -3,12 +3,15 @@
 from nooby import NoobyClient
 
 noobyClient = NoobyClient()
-noobyClient.init(None, 'localhost', 25000)
+noobyClient.init({
+    'log': lambda l:print(l),
+    'onmessage': lambda m:print(m),
+}, 'localhost', 25000)
 
 # connect to testChannel and say hello
 noobyClient.connect('testChannel')
-noobyClient.send({}, {'data': 'hello from Python'})
+for i in range(100):
+    noobyClient.send({}, {'data': 'hello from Python('+str(i)+')'})
 
-print('ok')
 # shutdown
 noobyClient.shutdown()

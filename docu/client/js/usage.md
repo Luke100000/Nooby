@@ -1,4 +1,5 @@
 # Table of contents
+
 [home](/README.md)
 - server
   - [installation](/docu/server/installation.md)
@@ -12,7 +13,7 @@
     - [Client Javascript Usage](/docu/client/js/usage.md)
 
 
-# client/lua/usage
+# client/js/usage
 
 ```js
 let noobyClient = new nooby;    //define the nooby class

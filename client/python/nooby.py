@@ -20,7 +20,7 @@ import socket
 import struct
 import lz4.block
 import msgpack
-import threading
+import multiprocessing
 
 def compress(data):
     return lz4.block.compress(data.encode())
@@ -39,10 +39,11 @@ class NoobyClient:
         }
         self.bufferSocket = bytearray()
         self.bufferUser = {}
-        self.lock = threading.Lock()
-        self.receive_thread = None
+        self.lock = multiprocessing.Lock()
+        self.receive_process = None
 
     def init(self, wrapper, ip, port, compress=True):
+        self.wrapper = wrapper
         self.compress = compress
         self.ip = ip
         self.port = port
@@ -51,26 +52,27 @@ class NoobyClient:
 
         print("[nooby] TCP Socket is open now.")
 
-        self.terminate_receive_event = threading.Event()  # Event for stopping the thread
-        self.receive_thread = threading.Thread(target=self.receive_messages, args=(wrapper,))
-        self.receive_thread.start()
+        self.receive_process = multiprocessing.Process(target=self.receive_messages)
+        self.receive_process.start()
 
     def shutdown(self):
-        self.runningThread = False
+        # TODO check if there are some send in buffer
+        self.receive_process.kill()
+        self.socket.close()
 
-    def receive_messages(self, wrapper):
-        from socket import timeout as TimeoutException
-        while not self.terminate_receive_event.is_set():
+    def receive_messages(self):
+        import select
+        while True:
             try:
-                data = self.socket.recv(256*256)
+                data = self.socket.recv(256*256+4)
                 if not data:
                     break
-                self.handle_message(wrapper, data)
-            except TimeoutException:
+                self.handle_message(data)
+            except IndexError:
                 pass
         self.socket.close()
 
-    def handle_message(self, wrapper, data):
+    def handle_message(self, data):
         self.lock.acquire()
         self.bufferSocket.extend(data)
 
@@ -109,7 +111,7 @@ class NoobyClient:
                             pass
 
                         header["u"] = user_id
-                        wrapper.onmessage(header, payload)
+                        self.wrapper['onmessage'](header, payload)
 
         self.lock.release()
 

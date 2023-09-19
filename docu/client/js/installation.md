@@ -1,4 +1,5 @@
 # Table of contents
+
 [home](/README.md)
 - server
   - [installation](/docu/server/installation.md)
