@@ -1,5 +1,5 @@
 --[[
-testing various commands
+Testing various commands
 --]]
 
 io.stdout:setvbuf("no")
@@ -28,7 +28,7 @@ local channelName = header.channel
 noobyHost:send({ m = "tag", tag = "filter", value = "test" })
 
 -- open a second connection for a client
--- here I use a host-clients model, but a purely p2p model would also work
+-- notice that there is no difference between hosts or clients, the term host only indicates who originally opened the channel
 local noobyClient = require("nooby")("localhost", 25000)
 noobyClient:connect(channelName, "password")
 

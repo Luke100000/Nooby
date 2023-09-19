@@ -2,15 +2,11 @@
 Example application - chat software
 --]]
 
---[[
-require("testbench")
-os.exit()
---]]
-
---[[
-require("benchmark")
-os.exit()
---]]
+if arg[2] == "testbench" then
+	return require("testbench")
+elseif arg[2] == "benchmark" then
+	return require("benchmark")
+end
 
 local inspect = require("inspect")
 

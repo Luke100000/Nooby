@@ -1,29 +1,25 @@
-### Table of contents
+# Table of contents
+
 [home](/README.md)
+
 - server
-  - [requirements](/docu/server/requirements.md)
   - [installation](/docu/server/installation.md)
-  - [settings](/docu/server/settings.md)
   - [benchmark](/docu/server/benchmark.md)
   - [modules](/docu/server/modules.md)
-  - [packageFormat](/docu/server/packageFormat.md)
+  - [specification](/docu/server/specification.md)
 - client
-  - lua
-    - [Client Lua Installation](/docu/client/lua/installation.md)
-    - [Client Lua Usage](/docu/client/lua/usage.md)
+  - [Lua Client](/docu/client/lua/usage.md)
   - javascript
     - [Client Javascript Installation](/docu/client/js/installation.md)
     - [Client Javascript Usage](/docu/client/js/usage.md)
 
+# Lua
 
-# client/lua/usage
-
-Located in `client/lua/`, with `nooby.lua`, `noobyThread` and `messagePack.lua` the required files.
+Located in `client/lua/`, with `nooby.lua`, `noobyThread.lua` and `messagePack.lua` the required files.
 
 This is an example communication between a host creating a channel and a client sending its first message.
 
 ```lua
-io.stdout:setvbuf("no")
 local inspect = require("inspect")
 
 -- open connection, connect to channel
@@ -49,7 +45,7 @@ local channelName = header.channel
 noobyHost:send({ m = "tag", tag = "filter", value = "test" })
 
 -- open a second connection for a client
--- here I use a host-clients model, but a purely p2p model would also work
+-- notice that there is no difference between hosts or clients, the term host only indicates who originally opened the channel
 local noobyClient = require("nooby")("localhost", 25000)
 noobyClient:connect(channelName, "password")
 
@@ -72,3 +68,15 @@ while true do
 	end
 end
 ```
+
+## Custom encoder
+
+By default the `string.buffer` encoder from LuaJIT is used to en- and decode payloads, which is by far the fastest serializer available.
+
+You may want to use the bundled MessagePack library, which is also used for the header data instead for a platform independend solution:
+
+```lua
+nooby:setEncoderDecoder(nooby.messagePackEncoder, nooby.messagePackDecoder)
+```
+
+Or implement and provide a custom one, mapping a `table` to a `string` and vice versa.
