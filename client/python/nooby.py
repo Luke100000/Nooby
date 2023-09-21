@@ -16,37 +16,34 @@
 # @license MIT
 #
 
+import multiprocessing
 import socket
 import struct
+
 import lz4.block
 import msgpack
-import multiprocessing
+
 
 def compress(data):
     return lz4.block.compress(data.encode())
 
-def decompress(cdata):
-    return lz4.block.decompress(cdata).decode()
+
+def decompress(compressed_data):
+    return lz4.block.decompress(compressed_data).decode()
 
 
 class NoobyClient:
-    def __init__(self):
-        self.status = {
-            "channel": "",
-            "user": -1,
-            "bytesSend": 0,
-            "bytesReceived": 0
-        }
-        self.bufferSocket = bytearray()
-        self.bufferUser = {}
+    def __init__(self, wrapper, ip, port, compression=True):
+        self.status = {"channel": "", "user": -1, "bytesSend": 0, "bytesReceived": 0}
+        self.buffer_socket = bytearray()
+        self.buffer_user = {}
         self.lock = multiprocessing.Lock()
-        self.receive_process = None
 
-    def init(self, wrapper, ip, port, compress=True):
         self.wrapper = wrapper
-        self.compress = compress
         self.ip = ip
         self.port = port
+        self.compression = compression
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((ip, port))
 
@@ -61,10 +58,9 @@ class NoobyClient:
         self.socket.close()
 
     def receive_messages(self):
-        import select
         while True:
             try:
-                data = self.socket.recv(256*256+4)
+                data = self.socket.recv(256 * 256 + 4)
                 if not data:
                     break
                 self.handle_message(data)
@@ -74,27 +70,37 @@ class NoobyClient:
 
     def handle_message(self, data):
         self.lock.acquire()
-        self.bufferSocket.extend(data)
+        self.buffer_socket.extend(data)
 
-        while len(self.bufferSocket) >= 4:
-            chunk_size = struct.unpack(">H", self.bufferSocket[2:4])[0]
-            if len(self.bufferSocket) >= chunk_size + 4:
-                user_id = struct.unpack(">H", self.bufferSocket[0:2])[0]
-                if user_id not in self.bufferUser:
-                    self.bufferUser[user_id] = self.bufferSocket[4:chunk_size + 4 + 1]
+        while len(self.buffer_socket) >= 4:
+            chunk_size = struct.unpack(">H", self.buffer_socket[2:4])[0]
+            if len(self.buffer_socket) >= chunk_size + 4:
+                user_id = struct.unpack(">H", self.buffer_socket[0:2])[0]
+                if user_id not in self.buffer_user:
+                    self.buffer_user[user_id] = self.buffer_socket[
+                        4 : chunk_size + 4 + 1
+                    ]
                 else:
-                    self.bufferUser[user_id].extend(self.bufferSocket[4:chunk_size + 4 + 1])
-                self.bufferSocket = self.bufferSocket[chunk_size + 4 + 1:]
+                    self.buffer_user[user_id].extend(
+                        self.buffer_socket[4 : chunk_size + 4 + 1]
+                    )
+                self.buffer_socket = self.buffer_socket[chunk_size + 4 + 1 :]
 
-                while len(self.bufferUser[user_id]) >= 6:
-                    header_size = struct.unpack(">H", self.bufferUser[user_id][0:2])[0]
-                    payload_size = struct.unpack(">I", self.bufferUser[user_id][2:6])[0]
+                while len(self.buffer_user[user_id]) >= 6:
+                    header_size = struct.unpack(">H", self.buffer_user[user_id][0:2])[0]
+                    payload_size = struct.unpack(">I", self.buffer_user[user_id][2:6])[
+                        0
+                    ]
 
-                    if len(self.bufferUser[user_id]) >= 6 + header_size + payload_size:
-                        header = self.bufferUser[user_id][6:6 + header_size]
-                        payload = self.bufferUser[user_id][6 + header_size:6 + header_size + payload_size]
+                    if len(self.buffer_user[user_id]) >= 6 + header_size + payload_size:
+                        header = self.buffer_user[user_id][6 : 6 + header_size]
+                        payload = self.buffer_user[user_id][
+                            6 + header_size : 6 + header_size + payload_size
+                        ]
 
-                        self.bufferUser[user_id] = self.bufferUser[user_id][6 + header_size + payload_size + 1:]
+                        self.buffer_user[user_id] = self.buffer_user[user_id][
+                            6 + header_size + payload_size + 1 :
+                        ]
 
                         if header:
                             header = msgpack.unpackb(header)
@@ -109,9 +115,12 @@ class NoobyClient:
                         elif payload[0] == 2:
                             # TODO: Handle zlib compressed payload
                             pass
+                        elif payload[0] == 3:
+                            # TODO: Handle gzip compressed payload
+                            pass
 
                         header["u"] = user_id
-                        self.wrapper['onmessage'](header, payload)
+                        self.wrapper["onmessage"](header, payload)
 
         self.lock.release()
 
@@ -120,7 +129,7 @@ class NoobyClient:
 
     def send(self, header, payload):
         msgpack_data = self.message_to_packet(header, payload)
-        binary_data = self.text2binary(msgpack_data)
+        binary_data = self.text_to_binary(msgpack_data)
         self.send_message(binary_data)
 
     def connect(self, channel=None):
@@ -129,25 +138,30 @@ class NoobyClient:
         else:
             self.send({"m": "connect"}, {})
 
-    def text2binary(self, text):
+    def text_to_binary(self, text):
         return text
 
-    def intTo2Bytes(self, n):
+    def int_to_2_bytes(self, n):
         return struct.pack(">H", n)
 
-    def bytesToInt(self, b):
+    def bytes_to_int(self, b):
         return struct.unpack(">I", b)[0]
 
-    def intTo4Bytes(self, n):
+    def int_to_4_bytes(self, n):
         return struct.pack(">I", n)
 
     def message_to_packet(self, header, payload):
         header_data = msgpack.packb(header)
         payload_data = msgpack.packb(payload)
 
-        if self.compress and len(payload_data) >= 128:
+        if self.compression and len(payload_data) >= 128:
             payload_data = bytes([1]) + compress(payload_data)
         else:
             payload_data = bytes([0]) + payload_data
 
-        return self.intTo2Bytes(len(header_data)) + self.intTo4Bytes(len(payload_data)) + header_data + payload_data
+        return (
+            self.int_to_2_bytes(len(header_data))
+            + self.int_to_4_bytes(len(payload_data))
+            + header_data
+            + payload_data
+        )
