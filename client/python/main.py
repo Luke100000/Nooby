@@ -1,4 +1,6 @@
 # This is the testing for the Nooby client class
+import threading
+from time import sleep
 
 from nooby import NoobyClient
 
@@ -15,6 +17,9 @@ client = NoobyClient(
 client.connect("testChannel")
 for i in range(100):
     client.send({}, {"data": "Hello from Python (" + str(i) + ")"})
+
+# Receive a few messages
+sleep(10)
 
 # Shutdown
 client.shutdown()

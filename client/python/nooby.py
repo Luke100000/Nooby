@@ -45,8 +45,10 @@ class NoobyClient:
         self.compression = compression
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(0.01)
         self.socket.connect((ip, port))
 
+        # todo debug, remove when done
         print("[nooby] TCP Socket is open now.")
 
         self.receive_process = multiprocessing.Process(target=self.receive_messages)
@@ -59,13 +61,13 @@ class NoobyClient:
 
     def receive_messages(self):
         while True:
+            # todo use recv_into and push directly on the buffer
             try:
-                data = self.socket.recv(256 * 256 + 4)
-                if not data:
-                    break
+                data = self.socket.recv(4096)
                 self.handle_message(data)
-            except IndexError:
-                pass
+            except socket.timeout:
+                print("socket timeout")
+                # todo exit when required
         self.socket.close()
 
     def handle_message(self, data):
@@ -121,6 +123,8 @@ class NoobyClient:
 
                         header["u"] = user_id
                         self.wrapper["onmessage"](header, payload)
+            else:
+                break
 
         self.lock.release()
 
