@@ -128,9 +128,8 @@ class NoobyClient:
         self.socket.send(data)
 
     def send(self, header, payload):
-        msgpack_data = self.message_to_packet(header, payload)
-        binary_data = self.text_to_binary(msgpack_data)
-        self.send_message(binary_data)
+        data = self.message_to_packet(header, payload)
+        self.send_message(data)
 
     def connect(self, channel=None):
         if channel is not None:
@@ -138,16 +137,16 @@ class NoobyClient:
         else:
             self.send({"m": "connect"}, {})
 
-    def text_to_binary(self, text):
-        return text
-
-    def int_to_2_bytes(self, n):
+    @staticmethod
+    def int_to_2_bytes(n):
         return struct.pack(">H", n)
 
-    def bytes_to_int(self, b):
+    @staticmethod
+    def bytes_to_int(b):
         return struct.unpack(">I", b)[0]
 
-    def int_to_4_bytes(self, n):
+    @staticmethod
+    def int_to_4_bytes(n):
         return struct.pack(">I", n)
 
     def message_to_packet(self, header, payload):
