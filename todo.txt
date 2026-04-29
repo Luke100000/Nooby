@@ -1,3 +1,7 @@
-channel settings
-getChannels module
-enhance server buffer (circular buffer?)
+Server:
+- Add automated integration tests for connect, reconnect, user ID reuse, directMessage, tags, settings, getChannels, getTags, and malformed packets.
+
+JavaScript client:
+- Decide whether client/js/nooby.js is browser-only or bundled CommonJS; the current file mixes script-tag usage with require("buffer") and require("lz4").
+- Add zlib and gzip support to the JavaScript client or reject those compression modes clearly.
+- Make the JavaScript client parse all complete chunks/messages currently buffered, not just one per WebSocket message.

@@ -1,6 +1,6 @@
 # Lua Client Usage
 
-The Lua client is located in `client/lua/`. The required files are `nooby.lua`, `noobyThread.lua`, and `messagePack.lua`.
+The Lua client is located in `client/lua/`. The required files are `nooby.lua`, `noobyThread.lua`, `buffer.lua`, and `messagePack.lua`.
 
 The following example shows a host creating a channel and a second client sending its first message.
 
@@ -59,12 +59,13 @@ end
 
 ## Custom encoder
 
-By default, the LuaJIT `string.buffer` encoder is used to encode and decode payloads. It is the fastest available serializer for this client.
+By default, the Lua client uses the bundled MessagePack encoder for payloads. This is compatible with Lua and LuaJIT.
 
-For a more platform-independent solution, use the bundled MessagePack library, which is also used for header data:
+When running on LuaJIT with `string.buffer` available, its encoder can be significantly faster.
 
 ```lua
-nooby:setEncoderDecoder(nooby.messagePackEncoder, nooby.messagePackDecoder)
+local buffer = require("string.buffer")
+nooby:setEncoderDecoder(buffer.encode, buffer.decode)
 ```
 
 You can also provide a custom encoder and decoder that map a `table` to a `string` and back.

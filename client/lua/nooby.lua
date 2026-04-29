@@ -1,7 +1,6 @@
 local dir = (...):match("(.*/)") or ""
 
 local packer = require(dir .. "/messagePack")
-local buffer = require("string.buffer")
 
 ---@class NoobySettings
 ---@field compression "none" | "lz4" | "zlib" | "gzip"
@@ -35,14 +34,14 @@ end
 ---@param data table
 ---@return string
 function meta.defaultEncoder(data)
-	return buffer.encode(data)
+	return packer.pack(data)
 end
 
 ---@param data string
 ---@return table
 function meta.defaultDecoder(data)
 	---@diagnostic disable-next-line: return-type-mismatch
-	return buffer.decode(data)
+	return packer.unpack(data)
 end
 
 ---@param data table

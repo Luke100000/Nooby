@@ -9,7 +9,10 @@ require("love.thread")
 require("love.data")
 require("love.timer")
 
-local buffer = require("string.buffer")
+local hasStringBuffer, buffer = pcall(require, "string.buffer")
+if not hasStringBuffer then
+	buffer = require(dir .. "/buffer")
+end
 
 local packer = require(dir .. "/messagePack")
 
