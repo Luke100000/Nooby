@@ -1,18 +1,13 @@
-# Table of contents
-[home](/README.md)
-- server
-  - [installation](/docu/server/installation.md)
-  - [benchmark](/docu/server/benchmark.md)
-  - [modules](/docu/server/modules.md)
-  - [specification](/docu/server/specification.md)
-- client
-  - [Lua Client](/docu/client/lua/usage.md)
-  - javascript
-    - [Client Javascript Installation](/docu/client/js/installation.md)
-    - [Client Javascript Usage](/docu/client/js/usage.md)
+# JavaScript Client Installation
 
+The JavaScript client is located in `client/js/` and is currently a work in progress.
 
-# client/js/installation
+Include the required JavaScript files in your browser project:
 
-Just import the js files into your project. That was it.
+```html
+<script src="lz4.min.js"></script>
+<script src="msgpack.min.js"></script>
+<script src="nooby.js"></script>
+```
 
+Use the WebSocket port from `server/config.json` when connecting from a browser.

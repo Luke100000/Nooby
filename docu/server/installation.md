@@ -1,38 +1,33 @@
-# Table of contents
+# Server Installation
 
-[home](/README.md)
-
-- server
-  - [installation](/docu/server/installation.md)
-  - [benchmark](/docu/server/benchmark.md)
-  - [modules](/docu/server/modules.md)
-  - [specification](/docu/server/specification.md)
-- client
-  - [Lua Client](/docu/client/lua/usage.md)
-  - javascript
-    - [Client Javascript Installation](/docu/client/js/installation.md)
-    - [Client Javascript Usage](/docu/client/js/usage.md)
-
-# Requirements
+## Requirements
 
 Node.js and npm.
 
-# Server installation
+## Running the server
 
-Download/clone the server directory and run the `noobdy.js` entry point. All npm packages will be installed automatically.
+Clone the repository, enter the server directory, install dependencies, and start the `nooby.js` entry point.
 
 ```bash
 git clone https://github.com/Luke100000/Nooby
-cd server
-nodejs ./nooby.js
+cd Nooby/server
+npm install
+npm start
 ```
 
-# Configuration
+You can also run the entry point directly:
 
-[server/config.json](server/config.json)
+```bash
+node ./nooby.js
+```
 
-- `logging`: additional information will be printed to the console.
-- `verbose`: every header of incoming and outgoing messages will be printed.
+## Configuration
 
-- `portTCP`: The port of the TCP Socket
-- `portWebSocket`: The port of the WebSocket
+Configuration is stored in [`server/config.json`](/server/config.json).
+
+- `logging`: prints additional runtime information to the console.
+- `verbose`: prints every incoming and outgoing message header.
+- `portTCP`: TCP socket port.
+- `portWebSocket`: WebSocket port.
+
+Use TCP for native clients and WebSocket for browser-based clients.

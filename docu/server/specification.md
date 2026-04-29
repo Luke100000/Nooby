@@ -1,42 +1,70 @@
-# Table of contents
-
-[home](/README.md)
-
-- server
-  - [installation](/docu/server/installation.md)
-  - [benchmark](/docu/server/benchmark.md)
-  - [modules](/docu/server/modules.md)
-  - [specification](/docu/server/specification.md)
-- client
-  - [Lua Client](/docu/client/lua/usage.md)
-  - javascript
-    - [Client Javascript Installation](/docu/client/js/installation.md)
-    - [Client Javascript Usage](/docu/client/js/usage.md)
-
 # Packet Format
 
-This section is only relevant when writing an own client and describes the binary representation of a packet.
+This page describes the binary format used between clients and the Nooby server. It is mainly relevant when implementing a custom client.
 
-Data is transmitted from _server to client_ in chunks, no bigger than `256^2` bytes:
+All integer fields are unsigned and big-endian.
 
-- `{userId}{chunkSize}{chunk}`
-  Messages from different users may interleave, therefore every user needs to concat chunks in its own buffer.
+## Message layout
 
-When data is sent from _client to server_, no chunking is performed as packets will never interleave.
+A Nooby message has a short framing header, an optional MessagePack header, and an optional payload:
 
-One or more chunks may form a message:
+```text
+{headerLength}{payloadLength}{header}{payload}
+```
 
-- `{headerLength}{payloadLength}{header}{payload}`
+| Field | Size | Meaning |
+| --- | ---: | --- |
+| `headerLength` | 2 bytes | Number of bytes in `header`. |
+| `payloadLength` | 4 bytes | Number of bytes in `payload`. |
+| `header` | variable | MessagePack object used by server modules. Omitted when `headerLength` is `0`. |
+| `payload` | variable | Application-defined bytes. Omitted when `payloadLength` is `0`. |
 
-`headerLength` 2 byte length of the header data  
-`payloadLength` 4 bytes length of the payload  
-`header` is a MessagePacked header containing module related data
-`payload` is the payload, its length is specified in the header and usage is completely up to the client
+If `headerLength` is `0`, the message is treated as a default `message` packet.
 
-It is common, but not required, that the payload starts with a leading byte defining its compression state:
+## Server to client
 
-- `0` uncompressed
-- `1` LZ4
-- `2` zlib
-- `3` gzip
-  The actual payload is also a MessagePack object
+Server-to-client data is chunked. This allows large payloads to stream while messages from different users interleave.
+
+```text
+{userId}{chunkSize}{chunk}
+```
+
+| Field | Size | Meaning |
+| --- | ---: | --- |
+| `userId` | 2 bytes | Sender ID within the channel. |
+| `chunkSize` | 2 bytes | Encoded chunk size. Read `chunkSize + 1` bytes for the actual chunk. |
+| `chunk` | variable | Raw bytes from that sender's message stream. |
+
+Important details:
+
+- The server stores `chunk.length - 1` in `chunkSize`.
+- The maximum chunk length is `65,536` bytes.
+- Keep one receive buffer per `userId`; chunks from different users may interleave.
+- After appending a chunk to a user's buffer, parse complete messages using the [message layout](#message-layout).
+
+## Client to server
+
+Client-to-server data is not chunked because packets from a single client do not interleave. Send one complete message at a time:
+
+```text
+{headerLength}{payloadLength}{header}{payload}
+```
+
+Use the same [message layout](#message-layout) as above.
+
+## Payload format
+
+The server does not inspect payload contents. The bundled clients use a leading compression byte followed by MessagePack payload data:
+
+```text
+{compression}{messagePackPayload}
+```
+
+| Byte | Compression |
+| ---: | --- |
+| `0` | uncompressed |
+| `1` | LZ4 |
+| `2` | zlib |
+| `3` | gzip |
+
+This convention is recommended for compatibility with existing clients, but custom clients may define their own payload format when all peers understand it.

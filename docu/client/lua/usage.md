@@ -1,31 +1,17 @@
-# Table of contents
+# Lua Client Usage
 
-[home](/README.md)
+The Lua client is located in `client/lua/`. The required files are `nooby.lua`, `noobyThread.lua`, and `messagePack.lua`.
 
-- server
-  - [installation](/docu/server/installation.md)
-  - [benchmark](/docu/server/benchmark.md)
-  - [modules](/docu/server/modules.md)
-  - [specification](/docu/server/specification.md)
-- client
-  - [Lua Client](/docu/client/lua/usage.md)
-  - javascript
-    - [Client Javascript Installation](/docu/client/js/installation.md)
-    - [Client Javascript Usage](/docu/client/js/usage.md)
-
-# Lua
-
-Located in `client/lua/`, with `nooby.lua`, `noobyThread.lua` and `messagePack.lua` the required files.
-
-This is an example communication between a host creating a channel and a client sending its first message.
+The following example shows a host creating a channel and a second client sending its first message.
 
 ```lua
 local inspect = require("inspect")
 
--- open connection, connect to channel
+-- Open a connection and create a channel.
 local noobyHost = require("nooby")("localhost", 25000)
 
--- connect to a new channel with (optional) password and channel settings (settings only work on new channels)
+-- Connect to a new channel with an optional password and channel settings.
+-- Settings only apply to newly created channels.
 noobyHost:connect(false, "password", {
 	visible = true,
 	password = "password",
@@ -33,37 +19,39 @@ noobyHost:connect(false, "password", {
 	description = "Playing on map xyz!",
 })
 
--- wait 3 seconds for channel join confirmation
+-- Wait up to 3 seconds for the channel join confirmation.
 local header, payload = noobyHost:demand(3)
 assert(header and header.m == "connected", "Hmm, connection failed")
 
--- that's the hosts unique id and the new channels name! The channel name can also be retrieved by the getChannels module.
+-- This is the host's unique ID and the new channel name.
+-- The channel name can also be retrieved with the getChannels module.
 local userId = header.u
 local channelName = header.channel
 
--- setting some tags
+-- Set tags used for message filtering.
 noobyHost:send({ m = "tag", tag = "filter", value = "test" })
 
--- open a second connection for a client
--- notice that there is no difference between hosts or clients, the term host only indicates who originally opened the channel
+-- Open a second connection for a client.
+-- There is no protocol-level difference between hosts and clients.
+-- "Host" only describes who originally opened the channel.
 local noobyClient = require("nooby")("localhost", 25000)
 noobyClient:connect(channelName, "password")
 
--- wait 3 seconds for channel join confirmation
+-- Wait up to 3 seconds for the channel join confirmation.
 local header, payload = noobyClient:demand(3)
 assert(header and header.m == "connected", "Hmm, connection failed (" .. inspect(header or payload) .. ")")
 
--- sending a welcome message too everyone else, no header required
+-- Send a welcome message to everyone else. No module header is required.
 noobyClient:send({ t = { filter = "test" } }, { data = "Welcome!" })
 
--- server loop, will print the clients welcome message
+-- Host loop: prints the client's welcome message.
 while true do
 	local header, payload = noobyHost:demand()
 	if header then
-		-- incoming data
+		-- Incoming data.
 		print(inspect(header), inspect(payload))
 	elseif header == false then
-		-- something went wrong, usually connection issues
+		-- Something went wrong, usually a connection issue.
 		print(payload)
 	end
 end
@@ -71,12 +59,12 @@ end
 
 ## Custom encoder
 
-By default the `string.buffer` encoder from LuaJIT is used to en- and decode payloads, which is by far the fastest serializer available.
+By default, the LuaJIT `string.buffer` encoder is used to encode and decode payloads. It is the fastest available serializer for this client.
 
-You may want to use the bundled MessagePack library, which is also used for the header data instead for a platform independend solution:
+For a more platform-independent solution, use the bundled MessagePack library, which is also used for header data:
 
 ```lua
 nooby:setEncoderDecoder(nooby.messagePackEncoder, nooby.messagePackDecoder)
 ```
 
-Or implement and provide a custom one, mapping a `table` to a `string` and vice versa.
+You can also provide a custom encoder and decoder that map a `table` to a `string` and back.

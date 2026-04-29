@@ -1,28 +1,23 @@
 # Nooby
 
-Extendable Node.js messaging server designed for easy client to client applications.
+Extensible Node.js messaging server for lightweight client-to-client applications.
 
-Communication uses [MessagePack](https://msgpack.org/index.html) and TCP / WebSocket and a simple packet format and therefore works for a wide variety of clients.
-
-Client implementations provided for Lua. JavaScript is WIP.
-
-An example chat software, benchmarks and test bench is provided for Lua. JavaScript is WIP.
+Nooby uses [MessagePack](https://msgpack.org/index.html), TCP or WebSocket transport, and a small packet format so clients can be implemented in different languages. The Lua client is functional and includes examples, benchmarks, and a test bench. The JavaScript client is currently a work in progress.
 
 [![Project license](https://img.shields.io/github/license/Luke100000/Nooby?style=flat-square)](https://github.com/Luke100000/Nooby/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Luke100000/Nooby?style=flat-square&logo=github)](https://github.com/Luke100000/Nooby/stargazers)
 
-# Table of contents
+## Documentation
 
-- server
-  - [installation](/docu/server/installation.md)
-  - [benchmark](/docu/server/benchmark.md)
-  - [modules](/docu/server/modules.md)
-  - [specification](/docu/server/specification.md)
-- client
-  - [Lua Client](/docu/client/lua/usage.md)
-  - javascript
-    - [Client Javascript Installation](/docu/client/js/installation.md)
-    - [Client Javascript Usage](/docu/client/js/usage.md)
+- Server
+  - [Installation](/docu/server/installation.md)
+  - [Benchmark](/docu/server/benchmark.md)
+  - [Modules](/docu/server/modules.md)
+  - [Packet specification](/docu/server/specification.md)
+- Clients
+  - [Lua usage](/docu/client/lua/usage.md)
+  - [JavaScript installation](/docu/client/js/installation.md)
+  - [JavaScript usage](/docu/client/js/usage.md)
 
 # Concept
 

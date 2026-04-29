@@ -1,107 +1,111 @@
-# Table of contents
-
-[home](/README.md)
-
-- server
-  - [installation](/docu/server/installation.md)
-  - [benchmark](/docu/server/benchmark.md)
-  - [modules](/docu/server/modules.md)
-  - [specification](/docu/server/specification.md)
-- client
-  - [Lua Client](/docu/client/lua/usage.md)
-  - javascript
-    - [Client Javascript Installation](/docu/client/js/installation.md)
-    - [Client Javascript Usage](/docu/client/js/usage.md)
-
 # Modules
 
-Nooby comes with a few inbuilt modules. The header contains required fields.
+Nooby includes several built-in modules. The packet header contains the module name and any module-specific fields.
 
-- `m` the module responsible for processing, or the type of answer. Default is `message`. May also be an alias to save
-  some bytes.
-- `u` the user the response originated from, might be the sender in case of errors or pings.
+## Common header fields
+
+- `m`: module responsible for processing the packet, or the response type. Defaults to `message`. Aliases may be used to reduce packet size.
+- `u`: user ID the response originated from. For errors or pings, this may be the sender.
+
+## Permissions
+
+Some modules require the channel `admin` tag. A private channel created without a `channel` name gives the creator this tag automatically.
+
+Requests without sufficient permission return an `error` response.
 
 ## `connect`
 
-Connect to a channel, disconnects from the old one if already connected. If multiple channels are required, multiple
-connections should be opened instead.
+Connects to a channel and disconnects from the previous one if already connected. Open multiple connections when a client needs to join multiple channels at the same time.
 
-If the channel name is omitted, a random channel is created. The creators admin tag is set to true (See (
-permissions)[#permissions]).
+If `channel` is omitted, a random private channel is created and the creator receives the `admin` tag. Otherwise, the user joins or creates a public channel when the optional password is correct.
 
-Otherwise, the user joins or creates a public channel, assuming the optional password is correct.
+Public channels are intended for lobbies or global chats. Their settings cannot be changed.
 
-Public channels are meant to be used for lobbies or global chats. Nobody can change settings on such a channel.
+**Alias:** `c`
 
-Alias `c`
+**Fields**
 
-- `channel` (optional) the channel name to connect
-- `password` (optional) password if the channel is password protected
-- `settings` (optional) a table containing channel settings, only when creating a private channel, see [settings](#settings)
+- `channel` (optional): channel name to connect to.
+- `password` (optional): password for protected channels.
+- `settings` (optional): channel settings used only when creating a private channel. See [`settings`](#settings).
 
 ### Response
 
-- `channel` the channel name chosen when creating a new channel
+- `channel`: generated channel name when creating a new private channel.
 
 ## `settings`
 
 Changes channel settings on private channels.
 
-- `password` (optional) sets a new password
-- `visible` (optional) toggles visibility in the channel list, direct connects are still valid
-- `game` (optional) sets the game name to be filtered by in the channel list
-- `name` (optional) sets the name of the channel as it would appear in the channel list
+**Permission:** channel `admin` tag
 
-Requires permission level 1.
+**Fields**
+
+- `settings`: object containing one or more settings to change.
+
+Supported `settings` keys:
+
+- `password`: sets a new password.
+- `visible`: toggles visibility in the channel list. Direct connections remain valid.
+- `game`: sets the game name used for channel list filtering.
+- `description`: sets the channel description shown in the channel list.
+- `name`: sets the channel name shown in the channel list.
 
 ## `message`
 
-Default module used to broadcast data to all clients, except the sender.
+Default module used to broadcast data to all clients except the sender.
 
-Alias `m`, `(default)`
+**Aliases:** `m`, default
 
-- `t` (optional) a dictionary of tags to be fulfilled
+**Fields**
+
+- `t` (optional): dictionary of tags that receivers must match.
 
 ## `directMessage`
 
 Sends a message directly to a single client.
 
-Alias `dm`
+**Alias:** `dm`
 
-- `u` the user ID to send to
+**Fields**
+
+- `u`: user ID to send to.
 
 ## `tag`
 
 Set tags for a single user.
 
-Required permission level 1, or 2 when specifying a specific user.
+**Permission:** no permission required for your own tags; channel `admin` tag required when changing another user.
 
-Alias `t`
+**Alias:** `t`
 
-- `u` the user to set the tags for, or empty to set on yourself.
-- `tag` the tag identifier
-- `value` the tags value, or empty to unset
+**Fields**
+
+- `u` (optional): user to set tags for. Omit to set tags on yourself.
+- `tag`: tag identifier.
+- `value` (optional): tag value. Omit to unset the tag.
 
 ## `ping`
 
-Pong. Sends back the payload.
+Returns the payload unchanged.
+
+**Alias:** `p`
 
 ## `getChannels`
 
-Retrieves all current tags for a user.
+Retrieves visible channels.
 
-Requires permission level 1.
+**Fields**
+
+- `game` (optional): only return channels for the matching game.
 
 ### Response
 
-- `channels` a list of channels, each channel is a directory with `channel`, name, `description`, `password` (boolean),
-  and `clients` (# of connected clients)
+- `channels`: list of channels. Each entry includes `channel`, `name`, `description`, `password` (boolean), and `clients` (number of connected clients).
 
 ## `getTags` WIP
 
-Retrieves all current tags for a user.
-
-Requires permission level 1.
+Planned module for retrieving current tags for a user.
 
 ## `getStats`
 
@@ -119,23 +123,22 @@ Retrieves the current networking stats.
 
 ### Response
 
-- `tags` the entire tag directory currently set.
+- `stats`: current networking counters.
 
-## Own Modules
+## Custom modules
 
-To get the module working, you have to put it into the `nooby_modules` folder. The name could be "myModule.js"
-In aliases, you can define alternative, shorter identifiers, but make sure to avoid duplicates.
+Place custom modules in `server/nooby_modules/`, for example `myModule.js`. Use `aliases` to define shorter identifiers, and avoid duplicates across all modules.
 
 ```js
 let init = function (env) {
-  // populate the environment at server load with module specific variables
+  // Populate the environment at server load with module-specific variables.
 };
 
 let receive = function (env, client, msg) {
-  // messages received from client
+  // Handle messages received from clients.
 };
 
-// the (short) name of the module as specified in a packets header
+// Short names accepted in packet headers.
 let aliases = ["mm"];
 
 module.exports = {
@@ -145,20 +148,15 @@ module.exports = {
 };
 ```
 
-# Additional Responses
+## Additional responses
 
 Additional responses the server may send to clients.
 
-## `error`
+### `error`
 
-- `reason` the reason for the error
-  - e.g. `permission denied`
-- `header` the header responsible for the error
+- `reason`: reason for the error, for example `permission denied`.
+- `header`: header that caused the error.
 
-## `shutdown`
+### `shutdown`
 
-Server has been shut down.
-
-# Permissions
-
-Some modules require a permission level. Having the `admin` tag grants level 2, being on a public server grants level 1, everyone else has level 0. Requesting a module with insufficient permission results in an `error` response.
+The server has shut down.
