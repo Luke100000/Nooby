@@ -24,21 +24,37 @@ let destroySocket = function (env, client) {
 }
 
 let receive = function (env, client, msg) {
+    if (msg.header.channel != null && typeof msg.header.channel !== "string") {
+        env.sendError(client, msg, "invalid channel")
+        return
+    }
+    let nextChannel = msg.header.channel || null
+
     //disconnect from old channel
     if (client.channel) {
         let channel = env.channels[client.channel]
-        let i = channel.clients.indexOf(client)
-        channel.clients.splice(i, 1)
+        if (channel) {
+            let i = channel.clients.indexOf(client)
+            if (i >= 0) {
+                channel.clients.splice(i, 1)
+            }
+            delete channel.tags[client.userId]
+            // TODO: Notify remaining clients when a socket moves between channels.
+            if (channel.clients.length === 0 && client.channel !== nextChannel) {
+                delete env.channels[client.channel]
+            }
+        }
     }
 
     //reset client data
     let tags = {}
 
     //set new channel name, or random if no name specified
-    if (msg.header.channel) {
-        client.channel = msg.header.channel.toString()
+    if (nextChannel) {
+        client.channel = nextChannel
     } else {
-        //todo make sure this channel is available
+        // TODO: Make sure this generated channel name is available.
+        // TODO: Use UUID
         client.channel = (env.lastChannelId++).toString()
 
         //private channel, first user is an admin
@@ -71,8 +87,8 @@ let receive = function (env, client, msg) {
     }
 
     //assign a unique id since the ID would expose the IP
-    //todo id overflow!
-    client.userId = client.userId || channel.lastUserID++
+    // TODO: Handle per-channel user ID overflow.
+    client.userId = channel.lastUserID++
 
     //add client to channel
     channel.clients.push(client)

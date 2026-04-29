@@ -2,7 +2,7 @@ let receive = function (env, client, msg) {
     let sent = false;
 
     for (const receiver of env.socketWrapper.clients) {
-        if (receiver.userId === msg.header.u) {
+        if (receiver.channel === client.channel && receiver.userId === msg.header.u) {
             let answer = new env.Message(null, msg);
             env.socketWrapper.sendMessage(receiver, client, answer)
             sent = true;

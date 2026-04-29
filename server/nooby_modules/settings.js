@@ -1,4 +1,9 @@
 let receive = function (env, client, msg) {
+    if (!msg.header.settings) {
+        env.sendError(client, msg, "missing settings")
+        return
+    }
+
     //check if client is in a channel
     if (client.channel != null) {
         //send packet to everyone in the channel, excluding the sender

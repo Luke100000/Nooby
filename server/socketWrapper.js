@@ -56,6 +56,7 @@ class Wrapper {
     receiveInner = function (client, data) {
         let self = this
 
+        // TODO: Replace the fixed receive buffer with a growable or circular buffer and reject oversized packets cleanly.
         //append data
         client.bytesReceived += data.copy(client.buffer, client.bytesReceived)
 

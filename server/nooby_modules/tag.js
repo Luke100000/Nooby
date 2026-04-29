@@ -15,8 +15,16 @@ let receive = function (env, client, msg) {
     }
 
     let tags = channel.tags[userId]
+    if (!tags) {
+        env.sendError(client, msg, "user not found")
+        return
+    }
     if (msg.header.tag != null) {
-        tags[msg.header.tag] = msg.header.value;
+        if (msg.header.value == null) {
+            delete tags[msg.header.tag]
+        } else {
+            tags[msg.header.tag] = msg.header.value;
+        }
     }
 }
 

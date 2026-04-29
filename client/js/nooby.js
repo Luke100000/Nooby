@@ -17,7 +17,7 @@
  *
  **/
 
-// imports needed   //TODO Thinking of directly put it the source here -> so there is only nooby.js
+// TODO: Decide whether this client should be browser-only or bundled with CommonJS dependencies.
 let Buffer = require('buffer').Buffer;      // Nodejs-like Buffer built-in
 let LZ4 = require('lz4');
 
@@ -51,9 +51,10 @@ class NoobyClient {
     bufferUser   = {};                  // This buffer is to concat the chunks from one user
 
     init(wrapper, ip, port, compress) {
-        self = this;
+        let self = this;
 
-        this.compress = compress || true;
+        this.wrapper = wrapper;
+        this.compress = compress !== false;
         if (wrapper.log == null) wrapper.log = console.log;
 
         this.ip   = ip;
@@ -104,7 +105,7 @@ class NoobyClient {
                                 
 
                                 // now if that worked, delete the original message from the user buffer
-                                self.bufferUser[userID] = self.bufferUser[userID].subarray(6 + headerSize + payloadSize + 1);
+                                self.bufferUser[userID] = self.bufferUser[userID].subarray(6 + headerSize + payloadSize);
 
                                 // decompress message
                                 if(header.length != 0){
@@ -118,7 +119,7 @@ class NoobyClient {
                                     payload = decompress(payload.subarray(1), true);
                                     payload = msgpack.decode(payload);
                                 } else if (payload[0] === 2) {  // zlib compressed
-                                    //TODO zlib
+                                    // TODO: Add zlib decompression support for browser payloads.
                                 }
                                 //console.log("len", 6 + headerSize + payloadSize, headerSize, payloadSize, header, payload);
 
@@ -166,23 +167,23 @@ class NoobyClient {
 
     //send Packet
     sendMessage(data) {
-        self = this
-        if (noobyClient.connection.readyState === 3) self.init(wrapper, this.ip, this.port)
-        if (noobyClient.connection.readyState !== 1) return;
+        let self = this
+        if (this.connection.readyState === 3) self.init(this.wrapper, this.ip, this.port, this.compress)
+        if (this.connection.readyState !== 1) return;
         self.status.bytesSend += data.byteLength;
         this.connection.send(data)
     }
 
     //send Message
     send(header, payload) {
-        self = this
+        let self = this
         let msgpack = self.messageToPacket(header, payload)
         let binary = self.text2binary(msgpack)
         self.sendMessage(binary)
     }
 
     connect(channel) {
-        self = this
+        let self = this
         if (channel != null)
             self.send({"m": "connect", "channel": channel}, {})
         else

@@ -40,7 +40,7 @@ local function packMessage(header, payload)
 	if payload then
 		--compress
 		local rawLength = #payload
-		if rawLength > 0 and compressionID > 0 then
+		if rawLength >= compressionThreshold and compressionID > 0 then
 			payload = compressionIDChar ..
 				love.data.compress("string", settings.compression, payload, settings.compressionLevel)
 
@@ -190,7 +190,7 @@ while true do
 				socket:close()
 				return
 			else
-				j[2] = lastByte + 1
+				j[2] = (lastByte or 0) + 1
 			end
 
 			break
