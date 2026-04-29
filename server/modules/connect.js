@@ -1,7 +1,8 @@
 function destroyClient(ctx, client) {
     if (!client.channel) return
 
-    const channel = ctx.channels.get(client.channel)
+    const channelName = client.channel
+    const channel = ctx.channels.get(channelName)
     if (!channel) return
 
     for (const receiver of channel.clients) {
@@ -10,12 +11,8 @@ function destroyClient(ctx, client) {
         }
     }
 
-    const index = channel.clients.indexOf(client)
-    if (index >= 0) {
-        channel.clients.splice(index, 1)
-    }
-    delete channel.tags[client.userId]
-    ctx.channels.removeIfEmpty(client.channel)
+    ctx.channels.removeClient(channelName, client)
+    ctx.channels.removeIfEmpty(channelName)
 }
 
 function receive(ctx, client, msg) {
@@ -27,15 +24,18 @@ function receive(ctx, client, msg) {
     const nextChannel = msg.header.channel || null
 
     if (client.channel) {
+        const previousChannelName = client.channel
         const previousChannel = ctx.channels.get(client.channel)
         if (previousChannel) {
-            const index = previousChannel.clients.indexOf(client)
-            if (index >= 0) {
-                previousChannel.clients.splice(index, 1)
+            for (const receiver of previousChannel.clients) {
+                if (receiver.userId !== client.userId) {
+                    ctx.router.send(receiver, client, {m: "disconnected"})
+                }
             }
-            delete previousChannel.tags[client.userId]
-            if (previousChannel.clients.length === 0 && client.channel !== nextChannel) {
-                ctx.channels.removeIfEmpty(client.channel)
+
+            ctx.channels.removeClient(previousChannelName, client)
+            if (previousChannel.clients.length === 0 && previousChannelName !== nextChannel) {
+                ctx.channels.removeIfEmpty(previousChannelName)
             }
         }
     }
@@ -55,7 +55,14 @@ function receive(ctx, client, msg) {
         return
     }
 
-    client.userId = channel.lastUserId++
+    const userId = ctx.channels.assignUserId(channel)
+    if (userId == null) {
+        client.channel = false
+        ctx.router.sendError(client, msg, "channel full")
+        return
+    }
+
+    client.userId = userId
     channel.clients.push(client)
     channel.tags[client.userId] = tags
 

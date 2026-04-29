@@ -40,6 +40,7 @@ Important details:
 - The server stores `chunk.length - 1` in `chunkSize`.
 - The maximum chunk length is `65,536` bytes.
 - Keep one receive buffer per `userId`; chunks from different users may interleave.
+- Remove a user's receive buffer when that user disconnects. User IDs may be reused after disconnect.
 - After appending a chunk to a user's buffer, parse complete messages using the [message layout](#message-layout).
 
 ## Client to server

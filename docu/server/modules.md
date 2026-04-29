@@ -17,6 +17,8 @@ Requests without sufficient permission return an `error` response.
 
 Connects to a channel and disconnects from the previous one if already connected. Open multiple connections when a client needs to join multiple channels at the same time.
 
+When a connected client joins another channel, remaining clients in the previous channel receive `disconnected` before clients in the new channel receive `connected`.
+
 If `channel` is omitted, a random private channel is created and the creator receives the `admin` tag. Otherwise, the user joins or creates a public channel when the optional password is correct.
 
 Public channels are intended for lobbies or global chats. Their settings cannot be changed.
@@ -103,9 +105,20 @@ Retrieves visible channels.
 
 - `channels`: list of channels. Each entry includes `channel`, `name`, `description`, `password` (boolean), and `clients` (number of connected clients).
 
-## `getTags` WIP
+## `getTags`
 
-Planned module for retrieving current tags for a user.
+Retrieves current tags for a user.
+
+**Permission:** no permission required for your own tags; channel `admin` tag required when retrieving another user.
+
+**Fields**
+
+- `u` (optional): user to retrieve tags for. Omit to retrieve your own tags.
+
+### Response
+
+- `u`: user ID the tags belong to.
+- `tags`: dictionary of current tag values.
 
 ## `getStats`
 

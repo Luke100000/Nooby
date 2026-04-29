@@ -6,7 +6,12 @@ class ChannelStore {
     }
 
     createPrivateName() {
-        return (this.lastChannelId++).toString()
+        let channelName
+        do {
+            channelName = (this.lastChannelId++).toString()
+        } while (this.channels[channelName] != null)
+
+        return channelName
     }
 
     get(channelName) {
@@ -37,6 +42,38 @@ class ChannelStore {
         if (channel && channel.clients.length === 0) {
             delete this.channels[channelName]
         }
+    }
+
+    removeClient(channelName, client) {
+        const channel = this.channels[channelName]
+        if (!channel) return null
+
+        const index = channel.clients.indexOf(client)
+        if (index >= 0) {
+            channel.clients.splice(index, 1)
+        }
+        delete channel.tags[client.userId]
+
+        return channel
+    }
+
+    assignUserId(channel) {
+        if (channel.clients.length >= 0x10000) return null
+
+        const usedIds = {}
+        for (const client of channel.clients) {
+            usedIds[client.userId] = true
+        }
+
+        for (let offset = 0; offset <= 0xFFFF; offset++) {
+            const userId = (channel.lastUserId + offset) & 0xFFFF
+            if (!usedIds[userId]) {
+                channel.lastUserId = (userId + 1) & 0xFFFF
+                return userId
+            }
+        }
+
+        return null
     }
 
     visible(game) {
