@@ -21,6 +21,12 @@ You can also run the entry point directly:
 node ./nooby.js
 ```
 
+Run the automated server tests with:
+
+```bash
+npm test
+```
+
 ## Configuration
 
 Configuration is stored in [`server/config.json`](/server/config.json).

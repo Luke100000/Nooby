@@ -5,7 +5,8 @@
   "author": "Thecoolpeople <benjamin@katzmair.eu>",
   "main": "nooby.js",
   "scripts": {
-    "start": "node nooby.js"
+    "start": "node nooby.js",
+    "test": "node tests/run.js"
   },
   "dependencies": {
     "msgpack-js": "^0.3.0",
