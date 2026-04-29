@@ -2,5 +2,6 @@
   "logging": true,
   "verbose": false,
   "portTCP": 25000,
-  "portWebSocket": 25002
+  "portWebSocket": 25002,
+  "portMetrics": 25003
 }

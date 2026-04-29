@@ -10,7 +10,6 @@ class StatsService {
             fs.mkdirSync(this.statsDirectory)
         }
 
-        setTimeout(() => this.halfHourSave(30 * 60 * 1000), 1000)
         setTimeout(() => this.daySave(), 1000)
     }
 
@@ -77,13 +76,6 @@ class StatsService {
         }
     }
 
-    halfHourSave(ms) {
-        const now = new Date()
-        const nextRun = ms - now % ms
-        setTimeout(() => this.halfHourSave(ms), nextRun)
-        console.log("[stats] set save Timeout to " + nextRun + "(" + this.msToTime(nextRun) + ")")
-        this.save()
-    }
 }
 
 module.exports = StatsService

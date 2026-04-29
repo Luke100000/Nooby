@@ -3,7 +3,9 @@ const msgpack = require("msgpack-js")
 
 const FrameParser = require("../protocol/frameParser.js")
 const ChannelStore = require("../core/channelStore.js")
+const ClientRegistry = require("../core/clientRegistry.js")
 const {Message} = require("../protocol/message.js")
+const {renderMetrics, renderDashboard, formatBytes, formatDuration} = require("../services/monitoring.js")
 
 const connectModule = require("../modules/connect.js")
 const directMessageModule = require("../modules/directMessage.js")
@@ -270,6 +272,57 @@ function testTagsAndGetTags() {
     assert.strictEqual(errors[errors.length - 1].reason, "permission denied")
 }
 
+function testMonitoringRendersMetricsAndDashboard() {
+    const clients = new ClientRegistry()
+    const channels = new ChannelStore(function () {})
+    const statsJson = {
+        outgoingMessages: 2000,
+        incomingMessages: 3000,
+        outgoingBytes: 5242880,
+        incomingBytes: 1536,
+        newConnections: 11000,
+    }
+    const context = {
+        clients,
+        channels,
+        stats: {
+            getJson: function () {
+                return statsJson
+            },
+        },
+    }
+
+    clients.add({id: "client"})
+    channels.ensure("room")
+
+    const metrics = renderMetrics(context, Date.now() - 1000)
+    assert(metrics.indexOf("nooby_connected_clients 1") >= 0)
+    assert(metrics.indexOf("nooby_channels 1") >= 0)
+    assert(metrics.indexOf("nooby_stats_incoming_messages 3000") >= 0)
+    assert(metrics.indexOf("nooby_stats_outgoing_messages 2000") >= 0)
+    assert(metrics.indexOf("nooby_stats_incoming_bytes 1536") >= 0)
+    assert(metrics.indexOf("nooby_stats_outgoing_bytes 5242880") >= 0)
+    assert(metrics.indexOf("nooby_stats_new_connections 11000") >= 0)
+
+    const dashboard = renderDashboard(context, Date.now() - 90061000)
+    assert(dashboard.indexOf("Connected clients") >= 0)
+    assert(dashboard.indexOf("Current channels") >= 0)
+    assert(dashboard.indexOf("Prometheus metrics") >= 0)
+    assert(dashboard.indexOf("3,000") >= 0)
+    assert(dashboard.indexOf("11,000") >= 0)
+    assert(dashboard.indexOf("1.50 KB") >= 0)
+    assert(dashboard.indexOf("5.00 MB") >= 0)
+    assert(dashboard.indexOf("1d 1h 1m 1s") >= 0)
+}
+
+function testMonitoringFormatters() {
+    assert.strictEqual(formatBytes(999), "999 B")
+    assert.strictEqual(formatBytes(1024), "1.00 KB")
+    assert.strictEqual(formatBytes(15360), "15.0 KB")
+    assert.strictEqual(formatDuration(0), "0s")
+    assert.strictEqual(formatDuration(3661), "1h 1m 1s")
+}
+
 const tests = [
     testPartialHeaderAndPayload,
     testDefaultMessageHeader,
@@ -282,6 +335,8 @@ const tests = [
     testReconnectNotifiesPreviousChannel,
     testDirectMessageAndBroadcastRegisterPayloadListeners,
     testTagsAndGetTags,
+    testMonitoringRendersMetricsAndDashboard,
+    testMonitoringFormatters,
 ]
 
 for (const test of tests) {

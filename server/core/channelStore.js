@@ -94,6 +94,10 @@ class ChannelStore {
 
         return channels
     }
+
+    count() {
+        return Object.keys(this.channels).length
+    }
 }
 
 module.exports = ChannelStore

@@ -3,6 +3,7 @@ const path = require("path")
 
 const {createLogger} = require("../services/logger.js")
 const StatsService = require("../services/stats.js")
+const {MonitoringService} = require("../services/monitoring.js")
 const ClientRegistry = require("./clientRegistry.js")
 const ChannelStore = require("./channelStore.js")
 const ModuleRegistry = require("./moduleRegistry.js")
@@ -56,16 +57,19 @@ function createApp(options) {
         stats,
         logger,
     })
+    const monitoring = new MonitoringService(context, config.portMetrics)
 
     return {
         start: function () {
             new TcpTransport(connectionManager, config.portTCP)
             new WebSocketTransport(connectionManager, config.portWebSocket)
+            monitoring.start()
         },
 
         shutdown: function () {
             stats.save()
             connectionManager.shutdown()
+            monitoring.shutdown()
         },
 
         context,

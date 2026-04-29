@@ -17,6 +17,10 @@ class ClientRegistry {
     all() {
         return this.clients
     }
+
+    count() {
+        return this.clients.length
+    }
 }
 
 module.exports = ClientRegistry

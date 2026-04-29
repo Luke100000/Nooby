@@ -35,5 +35,15 @@ Configuration is stored in [`server/config.json`](/server/config.json).
 - `verbose`: prints every incoming and outgoing message header.
 - `portTCP`: TCP socket port.
 - `portWebSocket`: WebSocket port.
+- `portMetrics`: HTTP port for the dashboard and Prometheus `/metrics` endpoint. Set it to `0`, `false`, or remove it to disable metrics.
 
 Use TCP for native clients and WebSocket for browser-based clients.
+
+## Metrics
+
+When `portMetrics` is set, the server exposes:
+
+- `http://localhost:<portMetrics>/metrics`: Prometheus text metrics.
+- `http://localhost:<portMetrics>/` or `/dashboard`: basic HTML overview.
+
+The metrics include connected clients, current channels, uptime, and the counters from the stats service.
