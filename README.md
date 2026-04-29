@@ -11,7 +11,6 @@ Nooby uses [MessagePack](https://msgpack.org/index.html), TCP or WebSocket trans
 
 - Server
   - [Installation](/docu/server/installation.md)
-  - [Benchmark](/docu/server/benchmark.md)
   - [Modules](/docu/server/modules.md)
   - [Packet specification](/docu/server/specification.md)
 - Clients
@@ -22,7 +21,7 @@ Nooby uses [MessagePack](https://msgpack.org/index.html), TCP or WebSocket trans
 # Concept
 
 The concept is a peer to peer packet messenger, with a server used to avoid direct connections.
-Usage should be simple and generic, yet stable and secure with reasonably [performance](/docu/server/benchmark.md).
+Usage should be simple and generic, yet stable and secure with reasonably performance.
 
 A Nooby server can be reused for multiple projects and handles common logic like login, session creation, game lobby
 queries etc. It also offloads the broadcasting of data to a server with potential better

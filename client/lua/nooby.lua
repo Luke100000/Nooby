@@ -1,6 +1,6 @@
 local dir = (...):match("(.*/)") or ""
 
-local packer = require(dir .. "/messagePack")
+local packer = require(dir .. ".messagePack")
 
 ---@class NoobySettings
 ---@field compression "none" | "lz4" | "zlib" | "gzip"

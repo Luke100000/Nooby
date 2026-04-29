@@ -6,6 +6,8 @@ if arg[2] == "testbench" then
 	return require("testbench")
 elseif arg[2] == "benchmark" then
 	return require("benchmark")
+elseif arg[2] == "benchmark_profile" then
+	return require("benchmark_profile")
 end
 
 local inspect = require("inspect")
@@ -23,6 +25,7 @@ nooby:connect("testChannel")
 nooby:send({ m = "tag", tag = "filter", value = "test" })
 
 love.graphics.setBackgroundColor(0.9, 0.9, 0.9)
+love.keyboard.setTextInput(true)
 
 function love.draw()
 	local width, height = love.graphics.getDimensions()

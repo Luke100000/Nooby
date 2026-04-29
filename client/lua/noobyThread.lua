@@ -1,8 +1,14 @@
 local dir, sendChannel, receiveChannel, server, port, settings = unpack({ ... })
 
+
+local compressionIds = {
+    ["lz4"] = 1,
+    ["zlib"] = 2,
+    ["gzip"] = 3
+}
+
 --the byte used to indicate the type of compression
-local compressionID = settings.compression == "lz4" and 1 or settings.compression == "zlib" and 2 or
-	settings.compression == "gzip" and 3 or 0
+local compressionID = compressionIds[settings.compression] or 0
 local compressionIDChar = string.char(compressionID)
 
 require("love.thread")
@@ -11,10 +17,10 @@ require("love.timer")
 
 local hasStringBuffer, buffer = pcall(require, "string.buffer")
 if not hasStringBuffer then
-	buffer = require(dir .. "/buffer")
+	buffer = require(dir .. ".buffer")
 end
 
-local packer = require(dir .. "/messagePack")
+local packer = require(dir .. ".messagePack")
 
 local socket
 
