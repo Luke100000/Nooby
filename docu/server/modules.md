@@ -127,15 +127,19 @@ Retrieves the current networking stats.
 
 ## Custom modules
 
-Place custom modules in `server/nooby_modules/`, for example `myModule.js`. Use `aliases` to define shorter identifiers, and avoid duplicates across all modules.
+Place custom modules in `server/modules/`, for example `myModule.js`. Use `aliases` to define shorter identifiers, and avoid duplicates across all modules.
 
 ```js
-let init = function (env) {
-  // Populate the environment at server load with module-specific variables.
+let init = function (ctx) {
+  // Optional server-load hook.
 };
 
-let receive = function (env, client, msg) {
+let receive = function (ctx, client, msg) {
   // Handle messages received from clients.
+};
+
+let destroyClient = function (ctx, client) {
+  // Optional cleanup hook when a client disconnects.
 };
 
 // Short names accepted in packet headers.
@@ -144,9 +148,18 @@ let aliases = ["mm"];
 module.exports = {
   init,
   receive,
+  destroyClient,
   aliases,
 };
 ```
+
+The module context exposes shared server services:
+
+- `ctx.router`: send messages, stream payloads, and return errors.
+- `ctx.clients`: connected client registry.
+- `ctx.channels`: channel store and channel listing helpers.
+- `ctx.stats`: networking counters.
+- `ctx.modules`: loaded modules by full module name.
 
 ## Additional responses
 
