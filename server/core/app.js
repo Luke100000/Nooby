@@ -21,9 +21,7 @@ function createApp(options) {
         fs.mkdirSync(crashLogDirectory)
     }
 
-    const stats = new StatsService(path.join(rootDirectory, "stats"))
-    stats.load()
-
+    const stats = new StatsService()
     const logger = createLogger(config)
     const clients = new ClientRegistry()
     const channels = new ChannelStore(logger.log)

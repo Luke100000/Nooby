@@ -9,7 +9,7 @@ function metricLine(name, help, type, value) {
 }
 
 function statsMetrics(stats) {
-    const json = stats.getJson()
+    const json = stats.get()
     const lines = []
 
     lines.push(metricLine("nooby_stats_incoming_messages", "Incoming Nooby messages in the current stats period.", "gauge", json.incomingMessages))
@@ -33,6 +33,15 @@ function renderMetrics(context, startedAt) {
 
 function dashboardValue(label, value) {
     return "<div class=\"metric\"><span>" + label + "</span><strong>" + value + "</strong></div>"
+}
+
+function escapeHtml(value) {
+    return value.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
 }
 
 function formatNumber(value) {
@@ -71,8 +80,37 @@ function formatDuration(seconds) {
     return parts.join(" ")
 }
 
+function renderListItems(values, emptyText) {
+    if (values.length === 0) {
+        return "<p class=\"empty\">" + emptyText + "</p>"
+    }
+
+    return "<ul>" + values.map(function (value) {
+        return "<li>" + value + "</li>"
+    }).join("") + "</ul>"
+}
+
+function renderGameList(context) {
+    return renderListItems(context.channels.games().map(function (game) {
+        return escapeHtml(game)
+    }), "No public games")
+}
+
+function renderPublicChannelList(context) {
+    return renderListItems(context.channels.visible().map(function (channel) {
+        const label = escapeHtml(channel.name || channel.channel)
+        const game = escapeHtml(channel.game)
+        const description = channel.description ? " - " + escapeHtml(channel.description) : ""
+        const password = channel.password ? " password" : " open"
+        const hostOnly = channel.hostOnly ? " host-only" : ""
+
+        return "<strong>" + label + "</strong> <span>(" + game + ", " +
+            formatNumber(channel.clients) + " clients," + password + hostOnly + ")</span>" + description
+    }), "No public channels")
+}
+
 function renderDashboard(context, startedAt) {
-    const stats = context.stats.getJson()
+    const stats = context.stats.get()
     const uptimeSeconds = Math.floor((Date.now() - startedAt) / 1000)
 
     return "<!doctype html>" +
@@ -86,6 +124,11 @@ function renderDashboard(context, startedAt) {
         ".metric{background:white;border:1px solid #ddd;border-radius:6px;padding:16px}" +
         ".metric span{display:block;color:#555;font-size:14px;margin-bottom:8px}" +
         ".metric strong{display:block;font-size:30px;line-height:1}" +
+        "section{margin-top:28px}" +
+        "h2{font-size:20px;margin:0 0 12px}" +
+        "ul{background:white;border:1px solid #ddd;border-radius:6px;margin:0;padding:8px 16px 8px 32px}" +
+        "li{padding:8px 0}" +
+        "li span,.empty{color:#555}" +
         "a{color:#005fcc}" +
         "</style></head><body><main>" +
         "<h1>Nooby Metrics</h1>" +
@@ -98,7 +141,10 @@ function renderDashboard(context, startedAt) {
         dashboardValue("Incoming bytes", formatBytes(stats.incomingBytes)) +
         dashboardValue("Outgoing bytes", formatBytes(stats.outgoingBytes)) +
         dashboardValue("New connections", formatNumber(stats.newConnections)) +
-        "</div><p><a href=\"/metrics\">Prometheus metrics</a></p>" +
+        "</div>" +
+        "<section><h2>Games</h2>" + renderGameList(context) + "</section>" +
+        "<section><h2>Public Channels</h2>" + renderPublicChannelList(context) + "</section>" +
+        "<p><a href=\"/metrics\">Prometheus metrics</a></p>" +
         "</main></body></html>"
 }
 
