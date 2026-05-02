@@ -14,6 +14,10 @@ noobyHost:connect(false, "password", {
 	password = "password",
 	game = "Your Game",
 	description = "Playing on map xyz!",
+	hostOnly = true,
+	data = {
+		map = "xyz",
+	},
 })
 
 -- wait 3 seconds for channel join confirmation
@@ -22,13 +26,13 @@ assert(header and header.m == "connected", "Hmm, connection failed")
 
 -- that's the hosts unique id and the new channels name! The channel name can also be retrieved by the getChannels module.
 local userId = header.u
+local hostId = header.host
 local channelName = header.channel
 
 -- setting some tags
 noobyHost:send({ m = "tag", tag = "filter", value = "test" })
 
 -- open a second connection for a client
--- notice that there is no difference between hosts or clients, the term host only indicates who originally opened the channel
 local noobyClient = require("nooby")("localhost", 25000)
 noobyClient:connect(channelName, "password")
 

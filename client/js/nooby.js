@@ -44,6 +44,7 @@ class NoobyClient {
     status = {
         channel:       "",
         user:          -1,
+        host:          null,
         bytesSend:     0,
         bytesReceived: 0
     };
@@ -133,10 +134,11 @@ class NoobyClient {
                                         
                                         self.status.user = userID;  // set own user id
                                         self.status.channel = header.channel;
+                                        self.status.host = header.host;
                                     }
 
                                     // new user connected in channel
-                                    if (header.u) {
+                                    if (header.u != null) {
                                         console.log("New User with ID: " + header.u);
                                     }
                                 }

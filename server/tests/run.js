@@ -182,13 +182,17 @@ function testConnectSettingsAndGetChannels() {
                 game: "game",
                 description: "desc",
                 name: "Room",
+                hostOnly: true,
+                data: {map: "arena"},
             },
         },
     })
 
     assert.strictEqual(errors.length, 0)
     assert.strictEqual(host.userId, 0)
+    assert.strictEqual(ctx.channels.get(host.channel).host, 0)
     assert.strictEqual(sent[sent.length - 1].header.m, "connected")
+    assert.strictEqual(sent[sent.length - 1].header.host, 0)
 
     const listClient = {id: "list"}
     getChannelsModule.receive(ctx, listClient, {header: {game: "game"}})
@@ -198,6 +202,7 @@ function testConnectSettingsAndGetChannels() {
     assert.strictEqual(response.channels.length, 1)
     assert.strictEqual(response.channels[0].name, "Room")
     assert.strictEqual(response.channels[0].password, true)
+    assert.deepStrictEqual(response.channels[0].data, {map: "arena"})
 }
 
 function testReconnectNotifiesPreviousChannel() {
@@ -247,28 +252,73 @@ function testDirectMessageAndBroadcastRegisterPayloadListeners() {
     assert.strictEqual(direct.listeners[0], c)
 }
 
-function testTagsAndGetTags() {
-    const {ctx, clients, sent, errors} = createContext()
-    const admin = {id: "admin", channel: "room", userId: 0}
-    const user = {id: "user", channel: "room", userId: 1}
-    clients.push(admin, user)
+function testHostOnlyRoutesGuestsToHost() {
+    const {ctx, clients, sentMessages, errors} = createContext()
+    const host = {id: "host", channel: "room", userId: 0}
+    const guest = {id: "guest", channel: "room", userId: 1}
+    const peer = {id: "peer", channel: "room", userId: 2}
+    clients.push(host, guest, peer)
     ctx.channels.ensure("room")
     const channel = ctx.channels.get("room")
-    channel.clients.push(admin, user)
-    channel.tags[0] = {admin: true}
+    channel.host = 0
+    channel.hostOnly = true
+    channel.clients.push(host, guest, peer)
+    channel.tags[0] = {}
+    channel.tags[1] = {}
+    channel.tags[2] = {}
+
+    const guestBroadcast = new Message({m: "message"})
+    guestBroadcast.payloadSize = 10
+    messageModule.receive(ctx, guest, guestBroadcast)
+
+    assert.strictEqual(sentMessages.length, 1)
+    assert.strictEqual(sentMessages[0].receiver, host)
+
+    const hostBroadcast = new Message({m: "message"})
+    hostBroadcast.payloadSize = 10
+    messageModule.receive(ctx, host, hostBroadcast)
+
+    assert.strictEqual(sentMessages.length, 3)
+    assert.strictEqual(sentMessages[1].receiver, guest)
+    assert.strictEqual(sentMessages[2].receiver, peer)
+
+    const blockedDirect = new Message({m: "directMessage", u: 2})
+    directMessageModule.receive(ctx, guest, blockedDirect)
+    assert.strictEqual(errors[errors.length - 1].reason, "permission denied")
+
+    const allowedDirect = new Message({m: "directMessage", u: 0})
+    directMessageModule.receive(ctx, guest, allowedDirect)
+    assert.strictEqual(sentMessages.length, 4)
+    assert.strictEqual(sentMessages[3].receiver, host)
+}
+
+function testTagsAndGetTags() {
+    const {ctx, clients, sent, errors} = createContext()
+    const host = {id: "host", channel: "room", userId: 0}
+    const user = {id: "user", channel: "room", userId: 1}
+    clients.push(host, user)
+    ctx.channels.ensure("room")
+    const channel = ctx.channels.get("room")
+    channel.host = 0
+    channel.clients.push(host, user)
+    channel.tags[0] = {}
     channel.tags[1] = {}
 
     tagModule.receive(ctx, user, {header: {m: "tag", tag: "ready", value: true}})
     assert.strictEqual(channel.tags[1].ready, true)
 
-    tagModule.receive(ctx, admin, {header: {m: "tag", u: 1, tag: "team", value: "red"}})
+    tagModule.receive(ctx, host, {header: {m: "tag", u: 1, tag: "team", value: "red"}})
     assert.strictEqual(channel.tags[1].team, "red")
 
-    getTagsModule.receive(ctx, admin, {header: {m: "getTags", u: 1}})
+    getTagsModule.receive(ctx, host, {header: {m: "getTags", u: 1}})
     assert.strictEqual(sent[sent.length - 1].header.m, "tags")
     assert.deepStrictEqual(sent[sent.length - 1].header.tags, {ready: true, team: "red"})
 
     getTagsModule.receive(ctx, user, {header: {m: "getTags", u: 0}})
+    assert.strictEqual(errors.length, 0)
+    assert.deepStrictEqual(sent[sent.length - 1].header.tags, {})
+
+    tagModule.receive(ctx, user, {header: {m: "tag", u: 0, tag: "team", value: "blue"}})
     assert.strictEqual(errors[errors.length - 1].reason, "permission denied")
 }
 
@@ -286,14 +336,19 @@ function testMonitoringRendersMetricsAndDashboard() {
         clients,
         channels,
         stats: {
-            getJson: function () {
+            get: function () {
                 return statsJson
             },
         },
     }
 
     clients.add({id: "client"})
-    channels.ensure("room")
+    const channel = channels.ensure("room")
+    channel.visible = true
+    channel.game = "game"
+    channel.name = "Room"
+    channel.description = "desc"
+    channel.clients.push({userId: 0})
 
     const metrics = renderMetrics(context, Date.now() - 1000)
     assert(metrics.indexOf("nooby_connected_clients 1") >= 0)
@@ -308,6 +363,10 @@ function testMonitoringRendersMetricsAndDashboard() {
     assert(dashboard.indexOf("Connected clients") >= 0)
     assert(dashboard.indexOf("Current channels") >= 0)
     assert(dashboard.indexOf("Prometheus metrics") >= 0)
+    assert(dashboard.indexOf("Games") >= 0)
+    assert(dashboard.indexOf("Public Channels") >= 0)
+    assert(dashboard.indexOf("game") >= 0)
+    assert(dashboard.indexOf("Room") >= 0)
     assert(dashboard.indexOf("3,000") >= 0)
     assert(dashboard.indexOf("11,000") >= 0)
     assert(dashboard.indexOf("1.50 KB") >= 0)
@@ -334,6 +393,7 @@ const tests = [
     testConnectSettingsAndGetChannels,
     testReconnectNotifiesPreviousChannel,
     testDirectMessageAndBroadcastRegisterPayloadListeners,
+    testHostOnlyRoutesGuestsToHost,
     testTagsAndGetTags,
     testMonitoringRendersMetricsAndDashboard,
     testMonitoringFormatters,

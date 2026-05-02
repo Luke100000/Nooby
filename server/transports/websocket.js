@@ -32,7 +32,9 @@ class WebSocketTransport {
             connectionManager.newClient(client)
 
             socket.on("message", function (message) {
-                connectionManager.receive(client, message.binaryData)
+                if (message.binaryData) {
+                    connectionManager.receive(client, message.binaryData)
+                }
             })
 
             socket.on("close", function () {

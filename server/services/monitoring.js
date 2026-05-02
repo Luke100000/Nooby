@@ -102,10 +102,9 @@ function renderPublicChannelList(context) {
         const game = escapeHtml(channel.game)
         const description = channel.description ? " - " + escapeHtml(channel.description) : ""
         const password = channel.password ? " password" : " open"
-        const hostOnly = channel.hostOnly ? " host-only" : ""
 
         return "<strong>" + label + "</strong> <span>(" + game + ", " +
-            formatNumber(channel.clients) + " clients," + password + hostOnly + ")</span>" + description
+            formatNumber(channel.clients) + " clients," + password + ")</span>" + description
     }), "No public channels")
 }
 

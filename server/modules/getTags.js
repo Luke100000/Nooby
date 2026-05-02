@@ -5,17 +5,7 @@ function receive(ctx, client, msg) {
     }
 
     const channel = ctx.channels.get(client.channel)
-    let userId
-
-    if (msg.header.u != null) {
-        if (!channel.tags[client.userId].admin) {
-            ctx.router.sendError(client, msg, "permission denied")
-            return
-        }
-        userId = msg.header.u
-    } else {
-        userId = client.userId
-    }
+    const userId = msg.header.u != null ? msg.header.u : client.userId
 
     const tags = channel.tags[userId]
     if (!tags) {

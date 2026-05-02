@@ -44,6 +44,6 @@ Use TCP for native clients and WebSocket for browser-based clients.
 When `portMetrics` is set, the server exposes:
 
 - `http://localhost:<portMetrics>/metrics`: Prometheus text metrics.
-- `http://localhost:<portMetrics>/` or `/dashboard`: basic HTML overview.
+- `http://localhost:<portMetrics>/` or `/dashboard`: basic HTML overview with metrics, public games, and public channels.
 
 The metrics include connected clients, current channels, uptime, and the counters from the stats service.

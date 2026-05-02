@@ -5,7 +5,7 @@ function receive(ctx, client, msg) {
     let userId
 
     if (msg.header.u != null) {
-        if (channel.tags[client.userId].admin) {
+        if (channel.host === client.userId) {
             userId = msg.header.u
         } else {
             ctx.router.sendError(client, msg, "permission denied")

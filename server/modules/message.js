@@ -12,14 +12,18 @@ function checkTags(clientTags, tags) {
 }
 
 function receive(ctx, client, msg) {
-    if (client.channel == null) {
+    if (!client.channel) {
         ctx.router.sendError(client, msg, "no channel joined")
         return
     }
 
     const answer = new Message(null, msg)
     const channel = ctx.channels.get(client.channel)
+
     for (const receiver of channel.clients) {
+        if (channel.hostOnly && client.userId !== channel.host && receiver.userId !== channel.host) {
+            continue
+        }
         if (receiver.userId !== client.userId && checkTags(channel.tags[receiver.userId], msg.header.t)) {
             ctx.router.sendMessage(receiver, client, answer)
         }

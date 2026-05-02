@@ -9,7 +9,7 @@ Nooby includes several built-in modules. The packet header contains the module n
 
 ## Permissions
 
-Some modules require the channel `admin` tag. A private channel created without a `channel` name gives the creator this tag automatically.
+Some modules require the channel host. A private channel created without a `channel` name stores the creator's user ID as `host`. Public channels have `host: null`.
 
 Requests without sufficient permission return an `error` response.
 
@@ -19,7 +19,7 @@ Connects to a channel and disconnects from the previous one if already connected
 
 When a connected client joins another channel, remaining clients in the previous channel receive `disconnected` before clients in the new channel receive `connected`.
 
-If `channel` is omitted, a random private channel is created and the creator receives the `admin` tag. Otherwise, the user joins or creates a public channel when the optional password is correct.
+If `channel` is omitted, a random private channel is created and the creator becomes the host. Otherwise, the user joins an existing channel or creates a public channel when the optional password is correct.
 
 Public channels are intended for lobbies or global chats. Their settings cannot be changed.
 
@@ -34,12 +34,13 @@ Public channels are intended for lobbies or global chats. Their settings cannot 
 ### Response
 
 - `channel`: generated channel name when creating a new private channel.
+- `host`: host user ID for private channels, or `null` for public channels.
 
 ## `settings`
 
 Changes channel settings on private channels.
 
-**Permission:** channel `admin` tag
+**Permission:** channel host
 
 **Fields**
 
@@ -52,10 +53,14 @@ Supported `settings` keys:
 - `game`: sets the game name used for channel list filtering.
 - `description`: sets the channel description shown in the channel list.
 - `name`: sets the channel name shown in the channel list.
+- `hostOnly`: when true, host broadcasts still reach everyone, but non-host messages only reach the host.
+- `data`: free-form dictionary for game-specific lobby or progress metadata.
 
 ## `message`
 
 Default module used to broadcast data to all clients except the sender.
+
+In `hostOnly` channels, non-host clients only send messages to the host. Host messages still broadcast to all matching clients.
 
 **Aliases:** `m`, default
 
@@ -67,6 +72,8 @@ Default module used to broadcast data to all clients except the sender.
 
 Sends a message directly to a single client.
 
+In `hostOnly` channels, non-host clients may only send direct messages to the host.
+
 **Alias:** `dm`
 
 **Fields**
@@ -77,7 +84,7 @@ Sends a message directly to a single client.
 
 Set tags for a single user.
 
-**Permission:** no permission required for your own tags; channel `admin` tag required when changing another user.
+**Permission:** no permission required for your own tags; channel host required when changing another user.
 
 **Alias:** `t`
 
@@ -103,13 +110,13 @@ Retrieves visible channels.
 
 ### Response
 
-- `channels`: list of channels. Each entry includes `channel`, `name`, `description`, `password` (boolean), and `clients` (number of connected clients).
+- `channels`: list of channels. Each entry includes `channel`, `name`, `description`, `game`, `data`, `password` (boolean), and `clients` (number of connected clients).
 
 ## `getTags`
 
 Retrieves current tags for a user.
 
-**Permission:** no permission required for your own tags; channel `admin` tag required when retrieving another user.
+**Permission:** public for any user in the current channel.
 
 **Fields**
 

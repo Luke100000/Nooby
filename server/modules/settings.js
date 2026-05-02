@@ -4,13 +4,14 @@ function receive(ctx, client, msg) {
         return
     }
 
-    if (client.channel == null) {
+    if (!client.channel) {
         ctx.router.sendError(client, msg, "no channel joined")
         return
     }
 
     const channel = ctx.channels.get(client.channel)
-    if (!channel.tags[client.userId].admin) {
+
+    if (channel.host !== client.userId) {
         ctx.router.sendError(client, msg, "no permissions")
         return
     }
@@ -26,6 +27,14 @@ function receive(ctx, client, msg) {
             channel.description = value
         } else if (key === "name") {
             channel.name = value
+        } else if (key === "hostOnly") {
+            channel.hostOnly = !!value
+        } else if (key === "data") {
+            if (value == null || typeof value !== "object" || Array.isArray(value)) {
+                ctx.router.sendError(client, msg, "invalid data")
+            } else {
+                channel.data = Object.assign({}, value)
+            }
         } else {
             ctx.router.sendError(client, msg, "unknown key " + key.toString())
         }

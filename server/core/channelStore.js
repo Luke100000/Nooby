@@ -24,7 +24,10 @@ class ChannelStore {
                 name: channelName,
                 description: "",
                 game: "unknown",
+                host: null,
+                hostOnly: false,
                 password: null,
+                data: {},
                 visible: false,
                 clients: [],
                 tags: {},
@@ -85,7 +88,9 @@ class ChannelStore {
                 channels.push({
                     channel: channelName,
                     name: channel.name,
+                    game: channel.game,
                     description: channel.description,
+                    data: Object.assign({}, channel.data),
                     password: !!channel.password,
                     clients: channel.clients.length,
                 })
@@ -93,6 +98,19 @@ class ChannelStore {
         }
 
         return channels
+    }
+
+    games() {
+        const games = {}
+
+        for (const channelName in this.channels) {
+            const channel = this.channels[channelName]
+            if (channel.visible) {
+                games[channel.game] = true
+            }
+        }
+
+        return Object.keys(games).sort()
     }
 
     count() {

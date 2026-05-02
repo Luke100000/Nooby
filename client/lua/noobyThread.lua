@@ -1,6 +1,5 @@
 local dir, sendChannel, receiveChannel, server, port, settings = unpack({ ... })
 
-
 local compressionIds = {
     ["lz4"] = 1,
     ["zlib"] = 2,
