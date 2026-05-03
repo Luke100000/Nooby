@@ -1,6 +1,5 @@
 /server/stats
 /.idea/
 node_modules
-package-lock.json
 /server/crashlogs/
 .vscode
